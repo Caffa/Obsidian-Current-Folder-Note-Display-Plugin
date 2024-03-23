@@ -197,15 +197,29 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// Get the exclude filter
 		const excludeFilter = this.plugin.settings.excludeTitlesFilter;
 
-		// Filter out notes that match the exclude filter
 		let filteredFiles = parentFolderFilesNoSubfolders;
-		if (excludeFilter) {
-			const possibleFilteredFiles = parentFolderFilesNoSubfolders.filter(file => !file.basename.includes(excludeFilter));
-			filteredFiles = possibleFilteredFiles;
+		let possibleFilteredFiles = parentFolderFilesNoSubfolders;
+		if (excludeFilter.length > 0) {
+			// let the exclude filter work with a list of words seperated by commas
+			if (excludeFilter.includes(',')) {
+				let excludeWords = excludeFilter.split(',');
+				// remove spaces from the words
+				excludeWords.forEach((word, index) => {
+					excludeWords[index] = word.trim();
+				});
+				// filter out notes that do not include any of the words in the filter and do it in a case insensitive way
+				possibleFilteredFiles = parentFolderFilesNoSubfolders.filter(file => !excludeWords.some(word => file.basename.toLowerCase().includes(word.toLowerCase())));
+			} else {
+
+				// Filter out notes that match the exclude filter
+				possibleFilteredFiles = parentFolderFilesNoSubfolders.filter(file => !file.basename.includes(excludeFilter));
+				
+			}
 			if (possibleFilteredFiles.length == 0) {
 				container.createEl('p', { text: `No notes found in the current folder that do not include "${excludeFilter}"` });
 				return;
 			}
+			filteredFiles = possibleFilteredFiles;
 		}
 
 		// If there are no notes in the folder, display a message
@@ -273,9 +287,24 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 
 		containerEl.empty();
 
+		// heading for filters 
+		containerEl.createEl("h2", { text: "Title filters" });
+
+		// button to reset the settings
+		// new Setting(containerEl)
+		// 	.setName('Reset settings')
+		// 	.setDesc('Reset the settings to their default values')
+		// 	.addButton(button => button
+		// 		.setButtonText('Reset')
+		// 		.onClick(async () => {
+		// 			this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, { excludeTitlesFilter: '' });
+		// 			await this.plugin.saveSettings();
+		// 			this.display();
+		// 		}));
+
 		new Setting(containerEl)
-			.setName('Exclude Titles Filter')
-			.setDesc('What notes to exclude from the view')
+			.setName('Exclude titles filter')
+			.setDesc('What notes to exclude from the view. This can be a list of words seperated by commas.')
 			.addText(text => text
 				.setPlaceholder('_Index')
 				.setValue(this.plugin.settings.excludeTitlesFilter)
@@ -285,8 +314,8 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				}));
 		
 		new Setting(containerEl)
-			.setName('Includes Titles Filter')
-			.setDesc('Only include notes with this in Title')
+			.setName('Includes titles filter')
+			.setDesc('Only include notes with this in their title. This can be a list of words seperated by commas.')
 			.addText(text => text
 				.setPlaceholder('Chapter')
 				.setValue(this.plugin.settings.includeTitleFilter)
@@ -295,10 +324,14 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 				}));
 		
+		// heading for options
+		containerEl.createEl("h2", { text: "Options" });
+		
 		// option to do a pretty title case for the notes
 		new Setting(containerEl)
-			.setName('Pretty Title Case')
+			.setName('Pretty title case')
 			.setDesc('Convert the note titles to Title Case')
+			// option to reset this setting
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.prettyTitleCase)
 				.onChange(async (value) => {
@@ -308,7 +341,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		
 		// option to include subfolder notes 
 		new Setting(containerEl)
-			.setName('Include Subfolder Notes')
+			.setName('Include subfolder notes')
 			.setDesc('Include notes in subfolders of the current folder')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.includeSubfolderNotes)
