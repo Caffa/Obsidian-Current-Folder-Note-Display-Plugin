@@ -1,5 +1,5 @@
 # minor version bump 
-# npm version patch
+npm version patch
 
 # create the current_release directory if it does not exist
 mkdir -p current-folder-notes

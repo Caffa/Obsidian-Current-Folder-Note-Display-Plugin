@@ -43,23 +43,35 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 		// when file is changes (opened) in the editor, update the view
 		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
-			let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
-			if (!view) {
-				// If there is no active CurrentFolderNotesDisplayView, open one
-				const leaf = this.app.workspace.getRightLeaf(false);
-				if (leaf) {
-					view = new CurrentFolderNotesDisplayView(leaf, this);
-					leaf.setViewState({
-						type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY,
-						active: true,
-					});
-				}
-			}
+			// let views = this.app.workspace.getLeavesOfType(CurrentFolderNotesDisplayView);
+			// let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
+			this.refreshView();
+
+			// if (!view) {
+			// 	// If there is no active CurrentFolderNotesDisplayView, open one
+			// 	const leaf = this.app.workspace.getRightLeaf(false);
+			// 	if (leaf) {
+			// 		view = new CurrentFolderNotesDisplayView(leaf, this);
+			// 		leaf.setViewState({
+			// 			type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY,
+			// 			active: true,
+			// 		});
+			// 	}
+			// }
+			// if (views.length > 0) {
+			// 	// If there is an active CurrentFolderNotesDisplayView, update it
+			// 	views[0].fileChangeHandler(file);
+			// 	// Close other CurrentFolderNotesDisplayView instances
+			// 	for (let i = 1; i < views.length; i++) {
+			// 		views[i].detach();
+			// 	}
+			// }
 			// if (view) {
 			// 	view.fileChangeHandler(file);
 			// 	// new Notice('File opened');
 			// }
 		}));
+
 		
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
@@ -99,6 +111,21 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		workspace.revealLeaf(leaf);
 	}
 
+	async refreshView() {
+		const { workspace } = this.app;
+		const leaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
+		if (leaves.length) {
+			// A leaf with our view already exists, use that
+			const view = leaves[0].view as CurrentFolderNotesDisplayView;
+			await view.displayNotesInCurrentFolder();
+		} else {
+			new Notice('Could not find the view');
+			this.activateView();
+		}
+	
+
+	}
+
 	async loadSettings() {
 		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
@@ -133,10 +160,11 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async onClose() {
-		// Nothing to clean up.
+		// close current view 
+
 	}
 
-	private async displayNotesInCurrentFolder(): Promise<void> {
+	async displayNotesInCurrentFolder(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
 
