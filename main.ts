@@ -41,6 +41,15 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			this.activateView();
 		});
 
+		// Add a command to open the view 
+		this.addCommand({
+			id: 'activate-folder-notes-display',
+			name: 'Open Current Folder Notes Pane',
+			callback: () => {
+				this.activateView();
+			}
+		});
+
 		// when file is changes (opened) in the editor, update the view
 		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
 			// let views = this.app.workspace.getLeavesOfType(CurrentFolderNotesDisplayView);
