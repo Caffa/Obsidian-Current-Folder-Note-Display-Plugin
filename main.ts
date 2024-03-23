@@ -1,40 +1,71 @@
 import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { ItemView, WorkspaceLeaf } from "obsidian";
 
-// Remember to rename these classes and interfaces!
 
 interface CurrentFolderNotesDisplaySettings {
-	ExcludeTitlesFilter: string;
+	excludeTitlesFilter: string;
+	includeTitleFilter: string;
+	prettyTitleCase: boolean;
+	includeSubfolderNotes: boolean;
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
-	ExcludeTitlesFilter: '_index',
+	excludeTitlesFilter: '_index',
+	includeTitleFilter: '',
+	prettyTitleCase: true,
+	includeSubfolderNotes: false,
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
 	settings: CurrentFolderNotesDisplaySettings;
 
+	fileChangeHandler(file: TFile) {
+        if (file instanceof TFile && file.path === this.file.path) {
+            this.load();
+        }
+    }
+
 	async onload() {
 		await this.loadSettings();
 
-		// add a panel to the right sidebar - view 
-		this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf));
+		// This adds a settings tab so the user can configure various aspects of the plugin
+		this.addSettingTab(new CurrentFolderNotesDisplaySettingTab(this.app, this));
 
+
+		// add a panel to the right sidebar - view 
+		// this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf));
+		this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf, this));
 		// Add a ribbon icon
 		this.addRibbonIcon('folder', 'Activate Folder Notes Display', () => {
 			// new Notice('This is a notice!');
 			this.activateView();
 		});
 
-
-		// This adds a settings tab so the user can configure various aspects of the plugin
-		this.addSettingTab(new CurrentFolderNotesDisplaySettingTab(this.app, this));
-
+		// when file is changes (opened) in the editor, update the view
+		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
+			let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
+			if (!view) {
+				// If there is no active CurrentFolderNotesDisplayView, open one
+				const leaf = this.app.workspace.getRightLeaf(false);
+				if (leaf) {
+					view = new CurrentFolderNotesDisplayView(leaf, this);
+					leaf.setViewState({
+						type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY,
+						active: true,
+					});
+				}
+			}
+			// if (view) {
+			// 	view.fileChangeHandler(file);
+			// 	// new Notice('File opened');
+			// }
+		}));
+		
 		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
 		// Using this function will automatically remove the event listener when this plugin is disabled.
-		this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-			console.log('click', evt);
-		});
+		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
+		// 	console.log('click', evt);
+		// });
 
 		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
 		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
@@ -82,9 +113,10 @@ export const VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY = "current-folder-notes-view
 
 export class CurrentFolderNotesDisplayView extends ItemView {
 	plugin: CurrentFolderNotesDisplay;
-	settings: CurrentFolderNotesDisplaySettings;
-	constructor(leaf: WorkspaceLeaf) {
+	
+	constructor(leaf: WorkspaceLeaf, plugin: CurrentFolderNotesDisplay) {
 		super(leaf);
+		this.plugin = plugin;
 	}
 
 	getViewType() {
@@ -96,10 +128,21 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async onOpen() {
+
+		await this.displayNotesInCurrentFolder();
+	}
+
+	async onClose() {
+		// Nothing to clean up.
+	}
+
+	private async displayNotesInCurrentFolder(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
 
-		container.createEl("h4", { text: "Notes in Current Folder" });
+		// container.createEl("h5", { text: "Current Folder Notes" });
+		// smaller title
+		container.createEl("h6", { text: "Current Folder Notes" });
 
 		// Get the current file's path
 		const activeFile = this.app.workspace.getActiveFile();
@@ -112,29 +155,108 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const allMarkdownFiles = this.app.vault.getMarkdownFiles();
 
 		// Filter the files to only include those in the parent folder
-		const parentFolderFiles = allMarkdownFiles.filter(file => file.path.startsWith(parentFolderPath));
+		let parentFolderFiles = allMarkdownFiles.filter(file => file.path.startsWith(parentFolderPath));
+
+		const includesFilter = this.plugin.settings.includeTitleFilter;
+		if (includesFilter && includesFilter.length > 0) {
+			// convert this text to a list of words seperated by commas
+			let possibleFilteredFiles = parentFolderFiles;
+			if (includesFilter.includes(',') || includesFilter.includes(' ')) {
+				let includeWords = includesFilter.split(',');
+				// remove spaces from the words
+				includeWords.forEach((word, index) => {
+					includeWords[index] = word.trim();
+				});
+				/* The line `console.log(includeWords);` is logging the array `includeWords` to the console. This
+				is helpful for debugging and understanding the content of the array at that point in the code
+				execution. It allows you to see the individual words extracted from the `includesFilter` string
+				and trimmed of any extra spaces. */
+				// console.log(includeWords);
+				// filter out notes that do not include any of the words in the filter and do it in a case insensitive way
+				possibleFilteredFiles = parentFolderFiles.filter(file => includeWords.some(word => file.basename.toLowerCase().includes(word.toLowerCase())));
+				// const possibleFilteredFiles = parentFolderFiles.filter(file => file.basename.includes(includesFilter));;
+			} else {
+				// filter out notes that do not include the words in the filter and do it in a case insensitive way
+				possibleFilteredFiles = parentFolderFiles.filter(file => file.basename.toLowerCase().includes(includesFilter.toLowerCase()));
+			}
+			// filter out notes that do not include the words in the filter
+			// const possibleFilteredFiles = parentFolderFiles.filter(file => file.basename.includes(includesFilter));
+			if (possibleFilteredFiles.length == 0) {
+				container.createEl('p', { text: `No notes found in the current folder that include "${includesFilter}"` });
+				return;
+			}
+			parentFolderFiles = possibleFilteredFiles;
+		}
+
+		let parentFolderFilesNoSubfolders = parentFolderFiles;
+		if (!this.plugin.settings.includeSubfolderNotes) {
+			// Exclude notes in subfolders from the list
+			parentFolderFilesNoSubfolders = parentFolderFiles.filter(file => !file.path.substring(parentFolderPath.length + 1).includes('/'));
+		} 
+
+		// Get the exclude filter
+		const excludeFilter = this.plugin.settings.excludeTitlesFilter;
 
 		// Filter out notes that match the exclude filter
-		// const excludeFilter = this.plugin.settings.ExcludeTitlesFilter;
-		
+		let filteredFiles = parentFolderFilesNoSubfolders;
+		if (excludeFilter) {
+			const possibleFilteredFiles = parentFolderFilesNoSubfolders.filter(file => !file.basename.includes(excludeFilter));
+			filteredFiles = possibleFilteredFiles;
+			if (possibleFilteredFiles.length == 0) {
+				container.createEl('p', { text: `No notes found in the current folder that do not include "${excludeFilter}"` });
+				return;
+			}
+		}
 
-		const filteredFiles = parentFolderFiles;
+		// If there are no notes in the folder, display a message
+		if (filteredFiles.length === 0) {
+			container.createEl('p', { text: 'No notes in this folder' });
+			return;
+		}
+
+		// Sort the files by name
+		filteredFiles.sort((a, b) => a.basename.localeCompare(b.basename));
 
 		// Iterate over the files and add their names to the container
 		filteredFiles.forEach(file => {
 			const p = container.createEl('p');
 			const a = p.createEl('a', { text: file.basename });
+			if (this.plugin.settings.prettyTitleCase) {
+				a.innerText = a.innerText.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+			}
+			// make the items similar to file explorer
+			// a.style.display = 'block';
+			a.style.margin = '0px';
+			a.style.padding = '0px';
+
 			a.style.cursor = 'pointer';
-			a.style.color = 'var(--text-accent)';
-			a.style.textDecoration = 'underline';
+			a.style.color = 'var(--text-normal)';
+			a.style.textDecoration = 'none';
+			a.style.fontSize = 'var(--font-small)';
+			// a.style.textDecoration = 'underline';
+			// for current file, give it a different color
+			if (file.path === currentFilePath) {
+				a.style.color = 'var(--text-muted)';
+				// a.style.backgroundColor = 'var(--color-base-40)';
+				// background style is highlighter
+				// a.style.fontWeight = 'bold';
+				// add an indicator that this is the current file with a > symbol
+				a.innerText = '> ' + a.innerText;
+			}
+			// make pretty when hover 
+			a.onmouseover = () => {				
+				a.style.backgroundColor = 'var(--interactive-hover)';
+			}
+			// and remove when not hovering
+			a.onmouseout = () => {
+				a.style.backgroundColor = 'transparent';
+			}
+
+			// When a note is clicked, open it in the workspace
 			a.addEventListener('click', () => {
 				this.app.workspace.openLinkText(file.basename, parentFolderPath);
 			});
 		});
-	}
-
-	async onClose() {
-		// Nothing to clean up.
 	}
 }
 
@@ -156,10 +278,45 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 			.setDesc('What notes to exclude from the view')
 			.addText(text => text
 				.setPlaceholder('_Index')
-				.setValue(this.plugin.settings.ExcludeTitlesFilter)
+				.setValue(this.plugin.settings.excludeTitlesFilter)
 				.onChange(async (value) => {
-					this.plugin.settings.ExcludeTitlesFilter = value;
+					this.plugin.settings.excludeTitlesFilter = value;
 					await this.plugin.saveSettings();
 				}));
+		
+		new Setting(containerEl)
+			.setName('Includes Titles Filter')
+			.setDesc('Only include notes with this in Title')
+			.addText(text => text
+				.setPlaceholder('Chapter')
+				.setValue(this.plugin.settings.includeTitleFilter)
+				.onChange(async (value) => {
+					this.plugin.settings.includeTitleFilter = value;
+					await this.plugin.saveSettings();
+				}));
+		
+		// option to do a pretty title case for the notes
+		new Setting(containerEl)
+			.setName('Pretty Title Case')
+			.setDesc('Convert the note titles to Title Case')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.prettyTitleCase)
+				.onChange(async (value) => {
+					this.plugin.settings.prettyTitleCase = value;
+					await this.plugin.saveSettings();
+				}));
+		
+		// option to include subfolder notes 
+		new Setting(containerEl)
+			.setName('Include Subfolder Notes')
+			.setDesc('Include notes in subfolders of the current folder')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.includeSubfolderNotes)
+				.onChange(async (value) => {
+					this.plugin.settings.includeSubfolderNotes = value;
+					await this.plugin.saveSettings();
+				}));
+				
+
 	}
 }
