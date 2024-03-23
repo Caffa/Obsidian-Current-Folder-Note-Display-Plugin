@@ -56,29 +56,6 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			// let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
 			this.refreshView();
 
-			// if (!view) {
-			// 	// If there is no active CurrentFolderNotesDisplayView, open one
-			// 	const leaf = this.app.workspace.getRightLeaf(false);
-			// 	if (leaf) {
-			// 		view = new CurrentFolderNotesDisplayView(leaf, this);
-			// 		leaf.setViewState({
-			// 			type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY,
-			// 			active: true,
-			// 		});
-			// 	}
-			// }
-			// if (views.length > 0) {
-			// 	// If there is an active CurrentFolderNotesDisplayView, update it
-			// 	views[0].fileChangeHandler(file);
-			// 	// Close other CurrentFolderNotesDisplayView instances
-			// 	for (let i = 1; i < views.length; i++) {
-			// 		views[i].detach();
-			// 	}
-			// }
-			// if (view) {
-			// 	view.fileChangeHandler(file);
-			// 	// new Notice('File opened');
-			// }
 		}));
 
 		
