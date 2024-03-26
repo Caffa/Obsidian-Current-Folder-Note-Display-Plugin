@@ -1,8 +1,19 @@
-/*
+/* styles.css */
 
-This CSS file will be included with your plugin, and
-available in the app when your plugin is enabled.
+.anchor-style {
+    display: 'block';
+    margin: 0px;
+    padding: 0px;
+    cursor: 'pointer';
+    color: var(--text-normal);
+    text-decoration: 'none';
+    font-size: var(--font-small);
+}
 
-If your plugin does not need CSS, delete this file.
+.current-file {
+    color: var(--text-muted);
+}
 
-*/
+.hover-style {
+    background-color: var(--interactive-hover);
+}

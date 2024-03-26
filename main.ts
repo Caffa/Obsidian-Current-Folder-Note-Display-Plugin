@@ -271,31 +271,20 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				a.innerText = a.innerText.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 			}
 			// make the items similar to file explorer
-			// a.style.display = 'block';
-			a.style.margin = '0px';
-			a.style.padding = '0px';
-
-			a.style.cursor = 'pointer';
-			a.style.color = 'var(--text-normal)';
-			a.style.textDecoration = 'none';
-			a.style.fontSize = 'var(--font-small)';
-			// a.style.textDecoration = 'underline';
-			// for current file, give it a different color
+			a.className = 'anchor-style';
+			// If the file path matches the current file path, assign the 'current-file' class
 			if (file.path === currentFilePath) {
-				a.style.color = 'var(--text-muted)';
-				// a.style.backgroundColor = 'var(--color-base-40)';
-				// background style is highlighter
-				// a.style.fontWeight = 'bold';
-				// add an indicator that this is the current file with a > symbol
+				a.className += ' current-file';
 				a.innerText = '> ' + a.innerText;
 			}
+
 			// make pretty when hover 
 			a.onmouseover = () => {				
-				a.style.backgroundColor = 'var(--interactive-hover)';
+				a.classList.add('hover-style');
 			}
 			// and remove when not hovering
 			a.onmouseout = () => {
-				a.style.backgroundColor = 'transparent';
+				a.classList.remove('hover-style');
 			}
 
 			// When a note is clicked, open it in the workspace
