@@ -1,12 +1,12 @@
 /* styles.css */
 
-.anchor-style {
-    display: 'block';
+.folder-notes-style {
+    display: block;
     margin: 0px;
     padding: 0px;
-    cursor: 'pointer';
+    cursor: pointer;
     color: var(--text-normal);
-    text-decoration: 'none';
+    text-decoration: none;
     font-size: var(--font-small);
 }
 

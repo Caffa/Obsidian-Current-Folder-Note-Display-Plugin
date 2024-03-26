@@ -1,12 +1,13 @@
-import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { ItemView, WorkspaceLeaf } from "obsidian";
-
+import { MarkdownView } from "obsidian";
 
 interface CurrentFolderNotesDisplaySettings {
 	excludeTitlesFilter: string;
 	includeTitleFilter: string;
 	prettyTitleCase: boolean;
 	includeSubfolderNotes: boolean;
+	includeCurrentFileOutline: boolean;
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
@@ -14,6 +15,7 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	includeTitleFilter: '',
 	prettyTitleCase: true,
 	includeSubfolderNotes: false,
+	includeCurrentFileOutline: true,
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
@@ -168,6 +170,32 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	}
 
+	// main.ts
+
+	// Function to create clickable headings
+	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string): void {
+		const headings: RegExpMatchArray | null = currentFileContent.match(/^(#+)\s+(.*)$/gm);
+		if (headings) {
+			headings.forEach((heading: string) => {
+				const headingLevelMatch: RegExpMatchArray | null = heading.match(/^(#+)/);
+				if (headingLevelMatch) {
+					const headingLevel: number = headingLevelMatch[0].length;
+					const headingText: string = heading.replace(/^(#+)\s+/, '');
+					const p: HTMLElement = container.createEl('p', { text: headingText });
+					p.style.marginLeft = `${headingLevel * 10}px`;
+					p.addEventListener('click', async () => {
+						this.app.workspace.openLinkText('#' + headingText, currentFilePath, false);
+						// do an escape to deselect the text
+						// const selection = window.getSelection();
+						// if (selection) {
+						// 	selection.removeAllRanges();
+						// }
+					});
+				}
+			});
+		}
+	}
+
 	async displayNotesInCurrentFolder(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
@@ -220,6 +248,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			parentFolderFiles = possibleFilteredFiles;
 		}
 
+
 		let parentFolderFilesNoSubfolders = parentFolderFiles;
 		if (!this.plugin.settings.includeSubfolderNotes) {
 			// Exclude notes in subfolders from the list
@@ -263,6 +292,17 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// Sort the files by name
 		filteredFiles.sort((a, b) => a.basename.localeCompare(b.basename));
 
+		// check for headings 
+		let MyHeadings = false;
+		let currentFileContent = '';
+		if (this.plugin.settings.includeCurrentFileOutline) {
+			const currentFile = this.app.workspace.getActiveFile();
+			if (currentFile) {
+				currentFileContent = await this.app.vault.read(currentFile);
+				MyHeadings = true;
+			}
+		}
+
 		// Iterate over the files and add their names to the container
 		filteredFiles.forEach(file => {
 			const p = container.createEl('p');
@@ -271,11 +311,16 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				a.innerText = a.innerText.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
 			}
 			// make the items similar to file explorer
-			a.className = 'anchor-style';
+			a.className = 'folder-notes-style';
 			// If the file path matches the current file path, assign the 'current-file' class
 			if (file.path === currentFilePath) {
 				a.className += ' current-file';
 				a.innerText = '> ' + a.innerText;
+				
+				if (MyHeadings) {
+					this.createClickableHeadings(container as HTMLElement, currentFileContent, currentFilePath);
+				}
+				
 			}
 
 			// make pretty when hover 
@@ -368,6 +413,17 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.includeSubfolderNotes)
 				.onChange(async (value) => {
 					this.plugin.settings.includeSubfolderNotes = value;
+					await this.plugin.saveSettings();
+				}));
+		
+		// option to include outline of current file
+		new Setting(containerEl)
+			.setName('Include outline of current file')
+			.setDesc('Include the outline of the current file in the view')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.includeCurrentFileOutline)
+				.onChange(async (value) => {
+					this.plugin.settings.includeCurrentFileOutline = value;
 					await this.plugin.saveSettings();
 				}));
 				
