@@ -44,7 +44,7 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		// Add a command to open the view 
 		this.addCommand({
 			id: 'activate-folder-notes-display',
-			name: 'Open Current Folder Notes Pane',
+			name: 'Open Pane',
 			callback: () => {
 				this.activateView();
 			}
@@ -58,15 +58,26 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 		}));
 
-		
-		// If the plugin hooks up any global DOM events (on parts of the app that doesn't belong to this plugin)
-		// Using this function will automatically remove the event listener when this plugin is disabled.
-		// this.registerDomEvent(document, 'click', (evt: MouseEvent) => {
-		// 	console.log('click', evt);
-		// });
+		// when a file is saved, update the view
+		this.registerEvent(this.app.vault.on('modify', async (file) => {
+			this.refreshView();
+		}));
 
-		// When registering intervals, this function will automatically clear the interval when the plugin is disabled.
-		this.registerInterval(window.setInterval(() => console.log('setInterval'), 5 * 60 * 1000));
+		// when a file is deleted, update the view
+		this.registerEvent(this.app.vault.on('delete', async (file) => {
+			this.refreshView();
+		}));
+
+		// when a file is created, update the view
+		this.registerEvent(this.app.vault.on('create', async (file) => {
+			this.refreshView();
+		}));
+
+		// when a file is renamed, update the view
+		this.registerEvent(this.app.vault.on('rename', async (file) => {
+			this.refreshView();
+		}));
+
 	}
 
 	onunload() {
@@ -108,6 +119,13 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			new Notice('Could not find the view');
 			this.activateView();
 		}
+
+		// // if this view is not open do nothing
+		// let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
+		// if (view) {
+		// 	await view.displayNotesInCurrentFolder();
+		// }
+
 	
 
 	}
