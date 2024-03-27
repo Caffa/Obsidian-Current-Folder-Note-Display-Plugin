@@ -40,7 +40,7 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		// this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf));
 		this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf, this));
 		// Add a ribbon icon
-		this.addRibbonIcon('folder', 'Activate Folder Notes Display', () => {
+		this.addRibbonIcon('folder', 'Activate folder notes display', () => {
 			// new Notice('This is a notice!');
 			this.activateView();
 		});
@@ -367,19 +367,8 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// heading for filters 
-		containerEl.createEl("h2", { text: "Title filters" });
+		new Setting(containerEl).setName('Title filters').setHeading();
 
-		// button to reset the settings
-		// new Setting(containerEl)
-		// 	.setName('Reset settings')
-		// 	.setDesc('Reset the settings to their default values')
-		// 	.addButton(button => button
-		// 		.setButtonText('Reset')
-		// 		.onClick(async () => {
-		// 			this.plugin.settings = Object.assign({}, DEFAULT_SETTINGS, { excludeTitlesFilter: '' });
-		// 			await this.plugin.saveSettings();
-		// 			this.display();
-		// 		}));
 
 		new Setting(containerEl)
 			.setName('Exclude titles filter')
@@ -404,7 +393,8 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				}));
 		
 		// heading for options
-		containerEl.createEl("h2", { text: "Options" });
+		new Setting(containerEl).setName('View Options').setHeading();
+		// containerEl.createEl("h2", { text: "Options" });
 		
 		// option to do a pretty title case for the notes
 		new Setting(containerEl)
