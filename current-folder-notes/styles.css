@@ -1,0 +1,19 @@
+/* styles.css */
+
+.folder-notes-style {
+    display: block;
+    margin: 0px;
+    padding: 0px;
+    cursor: pointer;
+    color: var(--text-normal);
+    text-decoration: none;
+    font-size: var(--font-small);
+}
+
+.current-file {
+    color: var(--text-muted);
+}
+
+.hover-style {
+    background-color: var(--interactive-hover);
+}
