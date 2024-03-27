@@ -8,6 +8,7 @@ interface CurrentFolderNotesDisplaySettings {
 	prettyTitleCase: boolean;
 	includeSubfolderNotes: boolean;
 	includeCurrentFileOutline: boolean;
+	// iconUsed: string;
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
@@ -16,6 +17,7 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	prettyTitleCase: true,
 	includeSubfolderNotes: false,
 	includeCurrentFileOutline: true,
+	// iconUsed: 'folder',
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
@@ -146,6 +148,7 @@ export const VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY = "current-folder-notes-view
 
 export class CurrentFolderNotesDisplayView extends ItemView {
 	plugin: CurrentFolderNotesDisplay;
+
 	
 	constructor(leaf: WorkspaceLeaf, plugin: CurrentFolderNotesDisplay) {
 		super(leaf);
@@ -157,7 +160,17 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	getDisplayText() {
-		return "CurrentFolderNotesDisplay view";
+		return "Current Folder Notes";
+	}
+
+	getIcon(): string {
+		// check icon is valid 
+		// if (this.plugin.settings.iconUsed) {
+		// 	// TODO check that this is a valid icon
+		// 	return this.plugin.settings.iconUsed;
+		// }
+		return 'folder';
+	
 	}
 
 	async onOpen() {
@@ -426,6 +439,24 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					this.plugin.settings.includeCurrentFileOutline = value;
 					await this.plugin.saveSettings();
 				}));
+		
+		// option to pick icon 
+		// let iconButton: HTMLElement; // Declare the iconButton variable
+
+		// new Setting(containerEl)
+		// 	.setName('Icon')
+		// 	.setDesc('Choose an icon for the view')
+		// 	.addText(text => text
+		// 		.setPlaceholder('folder')
+		// 		.onChange(async (value) => {
+		// 			// do something with the value
+		// 			this.plugin.settings.iconUsed = value;
+		// 			await this.plugin.saveSettings();
+		// 			(iconButton as HTMLButtonElement & { setIcon: (icon: string) => void }).setIcon(value); // Cast iconButton to a type that has the setIcon method
+		// 		}))
+		// 	.addButton(button => button
+		// 		.setTooltip('Current Icon')
+		// 		.setIcon(this.plugin.settings.iconUsed));
 				
 
 	}
