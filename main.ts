@@ -367,7 +367,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		containerEl.empty();
 
 		// heading for filters 
-		new Setting(containerEl).setName('Title filters').setHeading();
+		// new Setting(containerEl).setName('Title filters').setHeading();
 
 
 		new Setting(containerEl)
@@ -393,7 +393,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				}));
 		
 		// heading for options
-		new Setting(containerEl).setName('View Options').setHeading();
+		// new Setting(containerEl).setName('View Options').setHeading();
 		// containerEl.createEl("h2", { text: "Options" });
 		
 		// option to do a pretty title case for the notes
