@@ -213,6 +213,11 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const container = this.containerEl.children[1];
 		container.empty();
 
+		const longestNumSequence = (str: string) => {
+			const matches = str.match(/\d+/g) || [];
+			return Math.max(...matches.map(numStr => parseInt(numStr)), 0);
+		};
+
 		// container.createEl("h5", { text: "Current Folder Notes" });
 		// smaller title
 		container.createEl("h6", { text: "Current Folder Notes" });
@@ -303,7 +308,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		}
 
 		// Sort the files by name
-		filteredFiles.sort((a, b) => a.basename.localeCompare(b.basename));
+		// filteredFiles.sort((a, b) => a.basename.localeCompare(b.basename));
+		filteredFiles.sort((a, b) => longestNumSequence(a.basename) - longestNumSequence(b.basename));
 
 		// check for headings 
 		let MyHeadings = false;
