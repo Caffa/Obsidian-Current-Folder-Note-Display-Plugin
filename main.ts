@@ -1,6 +1,7 @@
 import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { ItemView, WorkspaceLeaf } from "obsidian";
 import { MarkdownView } from "obsidian";
+import { TFolder } from "obsidian";
 
 interface CurrentFolderNotesDisplaySettings {
 	excludeTitlesFilter: string;
@@ -85,6 +86,9 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	}
 
 	onunload() {
+		console.log('unloading plugin');
+		
+
 
 	}
 
@@ -230,10 +234,16 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const parentFolderPath = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
 
 		// Get all markdown files in the vault
-		const allMarkdownFiles = this.app.vault.getMarkdownFiles();
+		// const allMarkdownFiles = this.app.vault.getMarkdownFiles();
 
 		// Filter the files to only include those in the parent folder
-		let parentFolderFiles = allMarkdownFiles.filter(file => file.path.startsWith(parentFolderPath));
+		// let parentFolderFiles = allMarkdownFiles.filter(file => file.path.startsWith(parentFolderPath));
+
+		let folder = this.app.vault.getAbstractFileByPath(parentFolderPath);
+		let parentFolderFiles: any[] = [];
+		if (folder instanceof TFolder) {
+			parentFolderFiles = folder.children;
+		}
 
 		const includesFilter = this.plugin.settings.includeTitleFilter;
 		if (includesFilter && includesFilter.length > 0) {
