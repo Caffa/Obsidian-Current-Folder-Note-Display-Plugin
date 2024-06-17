@@ -64,9 +64,9 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		}));
 
 		// when a file is saved, update the view
-		this.registerEvent(this.app.vault.on('modify', async (file) => {
-			this.refreshView();
-		}));
+		// this.registerEvent(this.app.vault.on('modify', async (file) => {
+		// 	this.refreshView();
+		// }));
 
 		// when a file is deleted, update the view
 		this.registerEvent(this.app.vault.on('delete', async (file) => {
@@ -188,6 +188,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	// main.ts
+	
 
 	// Function to create clickable headings
 	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string): void {
@@ -197,7 +198,11 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				const headingLevelMatch: RegExpMatchArray | null = heading.match(/^(#+)/);
 				if (headingLevelMatch) {
 					const headingLevel: number = headingLevelMatch[0].length;
-					const headingText: string = heading.replace(/^(#+)\s+/, '');
+					let headingText: string = heading.replace(/^(#+)\s+/, '');
+
+					// Use extractAlias to get the alias from the heading text
+					headingText = this.extractAlias(headingText);
+
 					const p: HTMLElement = container.createEl('p', { text: headingText });
 					p.style.marginLeft = `${headingLevel * 10}px`;
 					p.addEventListener('click', async () => {
@@ -213,11 +218,28 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		}
 	}
 
+	// Function to extract alias from heading text
+	extractAlias(headingText: string): string {
+		const matches = headingText.match(/\[\[.*\|(.*?)\]\]/);
+		return matches ? matches[1] : headingText;
+	}
+
 	async displayNotesInCurrentFolder(): Promise<void> {
 		const container = this.containerEl.children[1];
 		container.empty();
 
-		const longestNumSequence = (str: string) => {
+		// const longestNumSequence = (str: string) => {
+		// 	const matches = str.match(/\d+/g) || [];
+		// 	return Math.max(...matches.map(numStr => parseInt(numStr)), 0);
+		// };
+
+		const sequenceWithPrefixOrLongest = (str: string) => {
+			const tMatches = str.match(/T(\d+)/);
+			if (tMatches) return parseInt(tMatches[1]); 
+
+			const yMatches = str.match(/Y(\d+)/);
+			if (yMatches) return parseInt(yMatches[1]) + 1000;// give T priority over Year
+
 			const matches = str.match(/\d+/g) || [];
 			return Math.max(...matches.map(numStr => parseInt(numStr)), 0);
 		};
@@ -234,7 +256,6 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const parentFolderPath = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
 
 		// Get all markdown files in the vault
-		// const allMarkdownFiles = this.app.vault.getMarkdownFiles();
 
 		// Filter the files to only include those in the parent folder
 		// let parentFolderFiles = allMarkdownFiles.filter(file => file.path.startsWith(parentFolderPath));
@@ -247,7 +268,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		const includesFilter = this.plugin.settings.includeTitleFilter;
 		if (includesFilter && includesFilter.length > 0) {
-			// convert this text to a list of words seperated by commas
+			// convert this text to a list of words separated by commas
 			let possibleFilteredFiles = parentFolderFiles;
 			if (includesFilter.includes(',') || includesFilter.includes(' ')) {
 				let includeWords = includesFilter.split(',');
@@ -289,7 +310,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		let filteredFiles = parentFolderFilesNoSubfolders;
 		let possibleFilteredFiles = parentFolderFilesNoSubfolders;
 		if (excludeFilter.length > 0) {
-			// let the exclude filter work with a list of words seperated by commas
+			// let the exclude filter work with a list of words separated by commas
 			if (excludeFilter.includes(',')) {
 				let excludeWords = excludeFilter.split(',');
 				// remove spaces from the words
@@ -319,7 +340,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Sort the files by name
 		// filteredFiles.sort((a, b) => a.basename.localeCompare(b.basename));
-		filteredFiles.sort((a, b) => longestNumSequence(a.basename) - longestNumSequence(b.basename));
+		filteredFiles.sort((a, b) => sequenceWithPrefixOrLongest(a.basename) - sequenceWithPrefixOrLongest(b.basename));
 
 		// check for headings 
 		let MyHeadings = false;
