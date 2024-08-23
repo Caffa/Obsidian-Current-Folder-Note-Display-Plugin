@@ -5,15 +5,52 @@
     margin: 0px;
     padding: 0px;
     cursor: pointer;
-    color: var(--text-normal);
+    color: var(--text-small);
     text-decoration: none;
-    font-size: var(--font-small);
+    font-size: var(--font-ui-medium);
+    font-family: var(--font-interface-theme);
+    line-height: var(--line-height-tight);
 }
 
 .current-file {
-    color: var(--text-muted);
+    color: var(--text-accent);
+    padding-top: 0.3em;
+    padding-bottom: 0.3em;
+    background-color: var(--color-base-00);
+    /* background-color: var(--text-selection); */
+    /* background-color: var(--text-highlight-bg); */
+    font-size: var(--font-ui-larger);
+    /* font-family: var(--font-interface-theme); */
+    font-weight: var(--font-bold)
 }
 
-.hover-style {
+.basic-heading {
+    /* color: var(--text-normal); */
+    /* color: var(--italic-color); */
+    /* Add a little indicator prepend */
+    padding-left: 1em;
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+    font-size: var(--font-ui-small);
+    /* font-family: var(--font-interface-theme); */
+
+}
+
+.extra-heading-style {
+    color: var(--text-accent);
+    padding-left: 1em;
+    padding-top: 0.1em;
+    padding-bottom: 0.1em;
+    font-size: var(--font-ui-medium);
+    /* background-color: var(--color-base-00); */
+    /* font-family: var(--font-interface-theme); */
+}
+
+.hover-style-file {
+    background-color: var(--interactive-hover);
+}
+
+p.hover-style-heading {
+    /* color: var(--interactive-normal); */
     background-color: var(--interactive-hover);
 }
