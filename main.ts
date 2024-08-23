@@ -9,6 +9,7 @@ interface CurrentFolderNotesDisplaySettings {
 	prettyTitleCase: boolean;
 	includeSubfolderNotes: boolean;
 	includeCurrentFileOutline: boolean;
+	includeAllFilesOutline: boolean;
 	// iconUsed: string;
 }
 
@@ -18,6 +19,7 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	prettyTitleCase: true,
 	includeSubfolderNotes: false,
 	includeCurrentFileOutline: true,
+	includeAllFilesOutline: false,
 	// iconUsed: 'folder',
 }
 
@@ -191,20 +193,26 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	
 
 	// Function to create clickable headings
-	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string): void {
+	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string, addExtraHeadingCSS: boolean): void {
 		const headings: RegExpMatchArray | null = currentFileContent.match(/^(#+)\s+(.*)$/gm);
 		if (headings) {
 			headings.forEach((heading: string) => {
 				const headingLevelMatch: RegExpMatchArray | null = heading.match(/^(#+)/);
 				if (headingLevelMatch) {
-					const headingLevel: number = headingLevelMatch[0].length;
+					// const headingLevel: number = headingLevelMatch[0].length;
 					let headingText: string = heading.replace(/^(#+)\s+/, '');
 
 					// Use extractAlias to get the alias from the heading text
 					headingText = this.extractAlias(headingText);
+					// Add a right arrow symbol to the heading text
+					let headingLabel = '→ ' + headingText;
 
-					const p: HTMLElement = container.createEl('p', { text: headingText });
-					p.style.marginLeft = `${headingLevel * 10}px`;
+					const p: HTMLElement = container.createEl('p', { text: headingLabel });
+					// p.style.marginLeft = `${headingLevel * 10}px`;
+					p.classList.add('basic-heading');
+					if (addExtraHeadingCSS) {
+						p.classList.add('extra-heading-style');
+					}
 					p.addEventListener('click', async () => {
 						this.app.workspace.openLinkText('#' + headingText, currentFilePath, false);
 						// do an escape to deselect the text
@@ -213,6 +221,17 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 						// 	selection.removeAllRanges();
 						// }
 					});
+
+					// Add hover effect
+					p.onmouseover = () => {		
+						// console.log('Mouse over:', headingText);
+						p.classList.add('hover-style-heading');
+					}
+					// Remove hover effect when not hovering
+					p.onmouseout = () => {
+						// console.log('Mouse out:', headingText);
+						p.classList.remove('hover-style-heading');
+					}
 				}
 			});
 		}
@@ -350,19 +369,10 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// filteredFiles.sort((a, b) => a.basename.localeCompare(b.basename));
 		filteredFiles.sort((a, b) => sequenceWithPrefixOrLongest(a.basename) - sequenceWithPrefixOrLongest(b.basename));
 
-		// check for headings 
-		let MyHeadings = false;
-		let currentFileContent = '';
-		if (this.plugin.settings.includeCurrentFileOutline) {
-			const currentFile = this.app.workspace.getActiveFile();
-			if (currentFile) {
-				currentFileContent = await this.app.vault.read(currentFile);
-				MyHeadings = true;
-			}
-		}
+		
 
 		// Iterate over the files and add their names to the container
-		filteredFiles.forEach(file => {
+		for (const file of filteredFiles) {
 			const p = container.createEl('p');
 			const a = p.createEl('a', { text: file.basename });
 			if (this.plugin.settings.prettyTitleCase) {
@@ -373,28 +383,46 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			// If the file path matches the current file path, assign the 'current-file' class
 			if (file.path === currentFilePath) {
 				a.className += ' current-file';
-				a.innerText = '> ' + a.innerText;
-				
-				if (MyHeadings) {
-					this.createClickableHeadings(container as HTMLElement, currentFileContent, currentFilePath);
+				a.innerText = '\u2605 ' + a.innerText;
+			}
+
+			// check for headings 
+			var MyHeadings = false;
+			var ThisFileContent = '';
+			// var currentFile = this.app.workspace.getActiveFile();
+			if (this.plugin.settings.includeAllFilesOutline || this.plugin.settings.includeCurrentFileOutline) {
+				if (file) {
+					ThisFileContent = await this.app.vault.read(file);
+					MyHeadings = true;
 				}
-				
+			}
+
+			if (this.plugin.settings.includeAllFilesOutline && file.path !== currentFilePath) {
+				if (MyHeadings) {
+					this.createClickableHeadings(container as HTMLElement, ThisFileContent, file.path, false);
+				}
+			}
+
+			if ((this.plugin.settings.includeAllFilesOutline || this.plugin.settings.includeCurrentFileOutline) && file.path === currentFilePath) {
+				if (MyHeadings) {
+					this.createClickableHeadings(container as HTMLElement, ThisFileContent, file.path, true);
+				}
 			}
 
 			// make pretty when hover 
 			a.onmouseover = () => {				
-				a.classList.add('hover-style');
+				a.classList.add('hover-style-file');
 			}
 			// and remove when not hovering
 			a.onmouseout = () => {
-				a.classList.remove('hover-style');
+				a.classList.remove('hover-style-file');
 			}
 
 			// When a note is clicked, open it in the workspace
 			a.addEventListener('click', () => {
 				this.app.workspace.openLinkText(file.basename, parentFolderPath);
 			});
-		});
+		}
 	}
 }
 
@@ -472,6 +500,16 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.includeCurrentFileOutline)
 				.onChange(async (value) => {
 					this.plugin.settings.includeCurrentFileOutline = value;
+					await this.plugin.saveSettings();
+				}));
+		
+		new Setting(containerEl)
+			.setName('Include outline of all files in the current folder')
+			.setDesc('Include outline of all files in the current folder')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.includeAllFilesOutline)
+				.onChange(async (value) => {
+					this.plugin.settings.includeAllFilesOutline = value;
 					await this.plugin.saveSettings();
 				}));
 		
