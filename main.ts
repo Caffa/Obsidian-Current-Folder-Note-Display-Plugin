@@ -276,13 +276,21 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				includeWords.forEach((word, index) => {
 					includeWords[index] = word.trim();
 				});
+
+				// if there are words use to filter files 
+				if (includeWords.length > 0) {
+					possibleFilteredFiles = parentFolderFiles.filter(file => includeWords.some(word => file.basename.toLowerCase().includes(word.toLowerCase())));
+				} else {
+					possibleFilteredFiles = parentFolderFiles;
+				}
+
 				/* The line `console.log(includeWords);` is logging the array `includeWords` to the console. This
 				is helpful for debugging and understanding the content of the array at that point in the code
 				execution. It allows you to see the individual words extracted from the `includesFilter` string
 				and trimmed of any extra spaces. */
 				// console.log(includeWords);
 				// filter out notes that do not include any of the words in the filter and do it in a case insensitive way
-				possibleFilteredFiles = parentFolderFiles.filter(file => includeWords.some(word => file.basename.toLowerCase().includes(word.toLowerCase())));
+				
 				// const possibleFilteredFiles = parentFolderFiles.filter(file => file.basename.includes(includesFilter));;
 			} else {
 				// filter out notes that do not include the words in the filter and do it in a case insensitive way
