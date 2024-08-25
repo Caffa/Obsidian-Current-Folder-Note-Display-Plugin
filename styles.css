@@ -8,7 +8,7 @@
     color: var(--text-small);
     text-decoration: none;
     font-size: var(--font-ui-medium);
-    font-family: var(--font-interface-theme);
+    /* font-family: var(--font-interface-theme); */
     line-height: var(--line-height-tight);
 }
 
