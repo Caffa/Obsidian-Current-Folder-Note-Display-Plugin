@@ -25,30 +25,13 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 
 export default class CurrentFolderNotesDisplay extends Plugin {
 	settings: CurrentFolderNotesDisplaySettings;
+	private leaves: WorkspaceLeaf[] = [];
 
 	fileChangeHandler(file: TFile) {
         if (file instanceof TFile && file.path === this.file.path) {
             this.load();
         }
-        this.panes = []; // Initialize the array in the constructor
-        // Close all tracked panes when the plugin is unloaded
-        for (const pane of this.panes) {
-            if (!pane.isDetached()) {
-                pane.detach();
-            }
-        }
-        this.panes = []; // Clear the array after closing the panes
-
-        // ... existing code ...
     }
-
-    async onload() {
-        await this.loadSettings();
-
-        // Example of opening a pane and adding it to the panes array
-        const leaf = this.app.workspace.getLeaf('tab');
-        await leaf.setViewState({ type: 'markdown' });
-        this.panes.push(leaf); // Add the pane to the panes array
 
 	async onload() {
 		await this.loadSettings();
@@ -103,10 +86,19 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			this.refreshView();
 		}));
 
+		// when I switch active files, update the view
+		// this.registerEvent(this.app.workspace.on('active-leaf-change', async (leaf) => {
+        //     this.refreshView();
+        // }));
+
+
 	}
 
 	onunload() {
 		console.log('unloading plugin');
+		this.leaves.forEach(leaf => {
+            leaf.detach();
+        });
 		
 
 
@@ -125,7 +117,8 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			// in the right sidebar for it
 			leaf = workspace.getRightLeaf(false);
 			if (leaf) {
-			await leaf.setViewState({ type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, active: true });
+				await leaf.setViewState({ type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, active: true });
+				this.leaves.push(leaf);
 			}
 		}
 
