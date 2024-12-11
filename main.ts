@@ -30,7 +30,25 @@ export default class CurrentFolderNotesDisplay extends Plugin {
         if (file instanceof TFile && file.path === this.file.path) {
             this.load();
         }
+        this.panes = []; // Initialize the array in the constructor
+        // Close all tracked panes when the plugin is unloaded
+        for (const pane of this.panes) {
+            if (!pane.isDetached()) {
+                pane.detach();
+            }
+        }
+        this.panes = []; // Clear the array after closing the panes
+
+        // ... existing code ...
     }
+
+    async onload() {
+        await this.loadSettings();
+
+        // Example of opening a pane and adding it to the panes array
+        const leaf = this.app.workspace.getLeaf('tab');
+        await leaf.setViewState({ type: 'markdown' });
+        this.panes.push(leaf); // Add the pane to the panes array
 
 	async onload() {
 		await this.loadSettings();
