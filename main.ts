@@ -138,6 +138,12 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			// A leaf with our view already exists, use that
 			const view = leaves[0].view as CurrentFolderNotesDisplayView;
 			await view.displayNotesInCurrentFolder();
+
+			// Remove all other leaves
+			for (let i = 1; i < leaves.length; i++) {
+				leaves[i].detach();
+			}
+
 		} else {			
 			// new Notice('Could not find the view');
 			this.activateView();
