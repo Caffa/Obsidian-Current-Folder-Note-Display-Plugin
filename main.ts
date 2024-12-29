@@ -94,13 +94,15 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 	}
 
-	onunload() {
+	async onunload() {
 		console.log('unloading plugin');
-		this.leaves.forEach(leaf => {
-            leaf.detach();
-        });
+		// Don't detach leaves in onunload. When the user updates your plugin, any open leaves will be reinitialized at their original position, regardless of where the user had moved them.
+		// this.leaves.forEach(leaf => {
+        //     leaf.detach();
+		// });
 		
 
+		
 
 	}
 
@@ -136,8 +138,8 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			// A leaf with our view already exists, use that
 			const view = leaves[0].view as CurrentFolderNotesDisplayView;
 			await view.displayNotesInCurrentFolder();
-		} else {
-			new Notice('Could not find the view');
+		} else {			
+			// new Notice('Could not find the view');
 			this.activateView();
 		}
 
