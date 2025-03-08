@@ -41,11 +41,10 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 
 		// add a panel to the right sidebar - view 
-		// this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf));
 		this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf, this));
+		
 		// Add a ribbon icon
 		this.addRibbonIcon('folder', 'Activate folder notes display', () => {
-			// new Notice('This is a notice!');
 			this.activateView();
 		});
 
@@ -60,16 +59,8 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 		// when file is changes (opened) in the editor, update the view
 		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
-			// let views = this.app.workspace.getLeavesOfType(CurrentFolderNotesDisplayView);
-			// let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
 			this.refreshView();
-
 		}));
-
-		// when a file is saved, update the view
-		// this.registerEvent(this.app.vault.on('modify', async (file) => {
-		// 	this.refreshView();
-		// }));
 
 		// when a file is deleted, update the view
 		this.registerEvent(this.app.vault.on('delete', async (file) => {
@@ -85,41 +76,46 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		this.registerEvent(this.app.vault.on('rename', async (file) => {
 			this.refreshView();
 		}));
-
-		// when I switch active files, update the view
-		// this.registerEvent(this.app.workspace.on('active-leaf-change', async (leaf) => {
-        //     this.refreshView();
-        // }));
-
-
 	}
 
 	async onunload() {
 		console.log('unloading plugin');
-		// Don't detach leaves in onunload. When the user updates your plugin, any open leaves will be reinitialized at their original position, regardless of where the user had moved them.
-		// this.leaves.forEach(leaf => {
-        //     leaf.detach();
-		// });
 		
-
+		// Clean up by detaching any leaves created by this plugin
+		const leavesToDetach = this.app.workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
+		leavesToDetach.forEach(leaf => {
+			leaf.detach();
+		});
 		
-
+		// Clear the leaves array
+		this.leaves = [];
 	}
 
 	async activateView() {
 		const { workspace } = this.app;
+		
+		// Clean up existing leaves first to prevent duplicates
+		const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
+		
+		// Keep only the first leaf if multiple exist
+		if (existingLeaves.length > 1) {
+			for (let i = 1; i < existingLeaves.length; i++) {
+				existingLeaves[i].detach();
+			}
+		}
+		
 		let leaf: WorkspaceLeaf | null = null;
-		const leaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
-
-		if (leaves.length) {
+		
+		if (existingLeaves.length) {
 			// A leaf with our view already exists, use that
-			leaf = leaves[0];
+			leaf = existingLeaves[0];
 		} else {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
 			leaf = workspace.getRightLeaf(false);
 			if (leaf) {
 				await leaf.setViewState({ type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, active: true });
+				// Only add to leaves array if it's a new leaf
 				this.leaves.push(leaf);
 			}
 		}
@@ -134,29 +130,23 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	async refreshView() {
 		const { workspace } = this.app;
 		const leaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
-		if (leaves.length) {
-			// A leaf with our view already exists, use that
-			const view = leaves[0].view as CurrentFolderNotesDisplayView;
-			await view.displayNotesInCurrentFolder();
-
-			// Remove all other leaves
+		
+		// Make sure we only have one leaf of our type
+		if (leaves.length > 1) {
+			// Keep the first one, detach others
 			for (let i = 1; i < leaves.length; i++) {
 				leaves[i].detach();
 			}
-
-		} else {			
-			// new Notice('Could not find the view');
+		}
+		
+		if (leaves.length === 1) {
+			// A leaf with our view exists, update it
+			const view = leaves[0].view as CurrentFolderNotesDisplayView;
+			await view.displayNotesInCurrentFolder();
+		} else if (leaves.length === 0) {			
+			// No leaf exists, create one
 			this.activateView();
 		}
-
-		// // if this view is not open do nothing
-		// let view = this.app.workspace.getActiveViewOfType(CurrentFolderNotesDisplayView);
-		// if (view) {
-		// 	await view.displayNotesInCurrentFolder();
-		// }
-
-	
-
 	}
 
 	async loadSettings() {
@@ -204,9 +194,12 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async onClose() {
-		// close current view 
-
-	}
+			// Remove this leaf from the plugin's leaves array to avoid memory leaks
+			const index = this.plugin.leaves.indexOf(this.leaf);
+			if (index > -1) {
+				this.plugin.leaves.splice(index, 1);
+			}
+		}
 
 	// main.ts
 	
