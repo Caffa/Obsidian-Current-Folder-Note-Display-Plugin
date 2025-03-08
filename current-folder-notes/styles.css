@@ -372,6 +372,10 @@
     transition: none; /* Remove transitions */
 }
 
+.bigger-text {
+        font-size: 2em; /* Adjust this value as needed */
+    }
+
 .neobrutalist-style .nav-link:hover {
     background: #00ccff; /* No hover effect */
     color: #000000; /* No hover effect */
@@ -616,4 +620,30 @@
     border-radius: 4px;
     background-color: var(--background-secondary);
     border: 1px solid var(--background-modifier-border);
+}
+
+/* Bigger text mode */
+.bigger-text .folder-notes-style,
+.bigger-text .basic-heading,
+.bigger-text .folder-section-header,
+.bigger-text .nav-link,
+.bigger-text .folder-path-display {
+    font-size: 1.15em;
+}
+
+.bigger-text .heading-level-1 {
+    font-size: 1.25em;
+}
+
+.bigger-text .heading-level-2 {
+    font-size: 1.2em;
+}
+
+.bigger-text .heading-level-3 {
+    font-size: 1.15em;
+}
+
+/* bigger heading for prev and next */
+.bigger-text .nav-title {
+    font-size: 1.3em;
 }
