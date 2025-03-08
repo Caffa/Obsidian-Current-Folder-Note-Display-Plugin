@@ -13,6 +13,8 @@ interface CurrentFolderNotesDisplaySettings {
 	displayMode: 'compact' | 'expanded';
 	styleMode: 'minimal' | 'fancy' | 'neobrutalist';
 	showNavigation: boolean;
+	biggerText: boolean; // Add this line
+	biggerTextMobileOnly: boolean; // Add this new setting
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
@@ -24,7 +26,9 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	includeListFileOutlines: false,
 	displayMode: 'expanded',
 	styleMode: 'fancy',
-	showNavigation: false
+	showNavigation: false,
+	biggerText: false,
+	biggerTextMobileOnly: false // Add default value
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
@@ -40,6 +44,9 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
+		 // Load custom styles
+		this.loadStyles();
+		
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new CurrentFolderNotesDisplaySettingTab(this.app, this));
 
@@ -160,6 +167,30 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	async saveSettings() {
 		await this.saveData(this.settings);
 	}
+
+	// Add this method to load styles
+	loadStyles() {
+		// Load styles from the plugin's styles.css
+		const styleEl = document.createElement('style');
+		styleEl.id = 'current-folder-notes-styles';
+		document.head.appendChild(styleEl);
+		
+		// Register the stylesheet to be removed when the plugin unloads
+		this.register(() => styleEl.remove());
+		
+		// Load the CSS file from the plugin directory
+		this.loadData().then(data => {
+			// You can add default styles here if needed
+			const defaultStyles = `
+				.folder-notes-style { font-weight: 500; }
+				.folder-notes-style.current-file { font-weight: bold; }
+				.hover-style-file { text-decoration: underline; }
+				.hover-style-heading { font-style: italic; }
+				/* Add more default styles as needed */
+			`;
+			styleEl.textContent = defaultStyles;
+		});
+	}
 }
 
 
@@ -183,11 +214,6 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	getIcon(): string {
-		// check icon is valid 
-		// if (this.plugin.settings.iconUsed) {
-		// 	// TODO check that this is a valid icon
-		// 	return this.plugin.settings.iconUsed;
-		// }
 		return 'folder';
 	
 	}
@@ -433,6 +459,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		container.classList.toggle('minimal-style', styleMode === 'minimal');
 		container.classList.toggle('fancy-style', styleMode === 'fancy');
 		container.classList.toggle('neobrutalist-style', styleMode === 'neobrutalist');
+		const shouldApplyBiggerText = this.plugin.settings.biggerText && 
+			(!this.plugin.settings.biggerTextMobileOnly || (this.app as any).isMobile);
+		container.classList.toggle('bigger-text', shouldApplyBiggerText);
 
 
 
@@ -675,6 +704,29 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					this.plugin.refreshView();
 				}));
 
+		new Setting(displayEl)
+			.setName('Bigger text')
+			.setDesc('Make all the text bigger for easier clicking.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.biggerText)
+				.onChange(async (value) => {
+					this.plugin.settings.biggerText = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshView();
+				}));
+
+			// Add this after the existing biggerText setting
+			new Setting(displayEl)
+				.setName('Mobile-only bigger text')
+				.setDesc('Only apply bigger text when using Obsidian on mobile devices.')
+				.addToggle(toggle => toggle
+					.setValue(this.plugin.settings.biggerTextMobileOnly)
+					.onChange(async (value) => {
+						this.plugin.settings.biggerTextMobileOnly = value;
+						await this.plugin.saveSettings();
+						this.plugin.refreshView();
+					}));
+
 		// Content options section
 		const contentEl = containerEl.createDiv({ cls: 'settings-section' });
 		contentEl.createEl('h3', { cls: 'settings-section-header', text: '📝 Content Options' });
@@ -734,3 +786,4 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				}));
 	}
 }
+
