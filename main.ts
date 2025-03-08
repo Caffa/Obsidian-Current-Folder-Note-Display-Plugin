@@ -8,21 +8,19 @@ interface CurrentFolderNotesDisplaySettings {
 	includeTitleFilter: string;
 	prettyTitleCase: boolean;
 	includeSubfolderNotes: boolean;
-	includeCurrentFileOutlineNavigation: boolean; // For navigation section
-	includeCurrentFileOutlineFileList: boolean;   // For file list section
+	includeCurrentFileOutline: boolean;
 	includeListFileOutlines: boolean;
 	displayMode: 'compact' | 'expanded';
 	styleMode: 'minimal' | 'fancy' | 'neobrutalist';
 	showNavigation: boolean;
 }
 
-const DEFAULT_SETTINGS: CurrentFolderNotesDisplaySettings = {
+const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	excludeTitlesFilter: '_index',
 	includeTitleFilter: '',
 	prettyTitleCase: true,
 	includeSubfolderNotes: false,
-	includeCurrentFileOutlineNavigation: true,
-	includeCurrentFileOutlineFileList: false,
+	includeCurrentFileOutline: true,
 	includeListFileOutlines: false,
 	displayMode: 'expanded',
 	styleMode: 'fancy',
@@ -41,17 +39,15 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 	async onload() {
 		await this.loadSettings();
-		
-		// Register the view
-		this.registerView(
-			VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, 
-			(leaf) => new CurrentFolderNotesDisplayView(leaf, this)
-		);
-		
-		// Add settings tab
+
+		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new CurrentFolderNotesDisplaySettingTab(this.app, this));
+
+
+		// add a panel to the right sidebar - view 
+		this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf, this));
 		
-		 // Add a ribbon icon
+		// Add a ribbon icon
 		this.addRibbonIcon('folder', 'Activate folder notes display', () => {
 			this.activateView();
 		});
@@ -158,16 +154,7 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	}
 
 	async loadSettings() {
-		// Load saved data
-		const savedData = await this.loadData();
-		
-		 // Start with defaults
-		 this.settings = Object.assign({}, DEFAULT_SETTINGS);
-		 
-		 // Merge with saved data if available
-		 if (savedData !== null) {
-			 Object.assign(this.settings, savedData);
-		 }
+		this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 	}
 
 	async saveSettings() {
@@ -338,7 +325,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		files = this.applyFilters(files, parentFolderPath);
 		
 		if (files.length === 0) {
-			this.showEmptyState(container, activeFile, currentFilePath);
+			this.showEmptyState(container, activeFile, currentFilePath, files);
 			return;
 		}
 
@@ -399,8 +386,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				});
 			}
 
-			// Current note outline in the navigation section if enabled
-			if (this.plugin.settings.includeCurrentFileOutlineNavigation && currentFileIndex !== -1) {
+			// Current note outline
+			if (this.plugin.settings.includeCurrentFileOutline) {
 				const currentFile = files[currentFileIndex];
 				const fileContent = await this.app.vault.read(currentFile);
 				if (fileContent) {
@@ -418,25 +405,21 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		}
 
 		// Always show flat list view
-		const flatListContainer = mainContent.createDiv({ cls: 'notes-flat-list' });
-		flatListContainer.createEl('div', { 
+		const listContainer = mainContent.createDiv({ cls: 'notes-flat-list' });
+		listContainer.createEl('div', { 
 			cls: 'folder-section-header',
 			text: 'FOLDER NOTES'
 		});
 		
-		 // Process each file for the regular list
 		for (const file of files) {
 			const isCurrentFile = file.path === currentFilePath;
-			
-			const fileContainer = flatListContainer.createDiv({ 
+			const fileContainer = listContainer.createDiv({ 
 				cls: isCurrentFile ? 'file-container current' : 'file-container' 
 			});
 
 			this.createFileLink(fileContainer, file, currentFilePath, parentFolderPath);
 			
-			// Show outline for current file if that setting is enabled, or for all files if the other setting is enabled
-			if ((isCurrentFile && this.plugin.settings.includeCurrentFileOutlineFileList) || 
-				this.plugin.settings.includeListFileOutlines) {
+			if (this.plugin.settings.includeListFileOutlines) {
 				const fileContent = await this.app.vault.read(file);
 				if (fileContent) {
 					this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
@@ -450,6 +433,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		container.classList.toggle('minimal-style', styleMode === 'minimal');
 		container.classList.toggle('fancy-style', styleMode === 'fancy');
 		container.classList.toggle('neobrutalist-style', styleMode === 'neobrutalist');
+
+
+
 	}
 
 	// Helper function to create file links with consistent styling
@@ -483,9 +469,14 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	// Helper method to show empty state
-	private showEmptyState(container: HTMLElement, activeFile: TFile | null, currentFilePath: string): void {
+	private showEmptyState(container: HTMLElement, activeFile: TFile | null, currentFilePath: string, files: TFile[]): void {
 		const emptyStateDiv = container.createDiv({ cls: 'empty-state-message' });
-		
+		if (files.length === 0) {
+			emptyStateDiv.createEl('p', { 
+				text: 'No notes found. If you have recently added or moved notes, Obsidian might still be indexing them. Please wait a moment and try again.',
+				cls: 'empty-state-highlight'
+			});
+		}
 		if (this.plugin.settings.includeTitleFilter) {
 			emptyStateDiv.createEl('p', { 
 				text: `🔍 No notes match the current filter "${this.plugin.settings.includeTitleFilter}".`,
@@ -656,7 +647,6 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.prettyTitleCase = value;
 					await this.plugin.saveSettings();
-					this.plugin.refreshView();
 				}));
 
 		new Setting(displayEl)
@@ -669,7 +659,6 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.displayMode = value as 'compact' | 'expanded';
 					await this.plugin.saveSettings();
-					this.plugin.refreshView();
 				}));
 
 		new Setting(displayEl)
@@ -702,41 +691,26 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.includeSubfolderNotes = value;
 					await this.plugin.saveSettings();
-					this.plugin.refreshView();
 				}));
 		
-		new Setting(contentEl)
-			.setName('Show outline in navigation area')
-			.setDesc('Display headings from the current file in the top navigation section.')
-			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.includeCurrentFileOutlineNavigation) 
-				.onChange(async (value) => {
-					this.plugin.settings.includeCurrentFileOutlineNavigation = value;
-					await this.plugin.saveSettings();
-					this.plugin.refreshView();
-				}));
-
 		new Setting(contentEl)
 			.setName('Show outline in current file section')
 			.setDesc('Display headings from the currently active file at the top of the panel.')
 			.addToggle(toggle => toggle
-				.setValue(this.plugin.settings.includeCurrentFileOutlineFileList)
+				.setValue(this.plugin.settings.includeCurrentFileOutline)
 				.onChange(async (value) => {
-					this.plugin.settings.includeCurrentFileOutlineFileList = value;
+					this.plugin.settings.includeCurrentFileOutline = value;
 					await this.plugin.saveSettings();
-					this.plugin.refreshView();
 				}));
 		
-
 		new Setting(contentEl)
-			.setName('Show outlines under files in list')
+			.setName('Show outline in files list')
 			.setDesc('Display headings under each file in the folder notes list.')
 			.addToggle(toggle => toggle
 				.setValue(this.plugin.settings.includeListFileOutlines)
 				.onChange(async (value) => {
 					this.plugin.settings.includeListFileOutlines = value;
 					await this.plugin.saveSettings();
-					this.plugin.refreshView();
 				}));
 
 		// About section with help text
