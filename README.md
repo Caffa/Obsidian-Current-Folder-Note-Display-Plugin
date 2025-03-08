@@ -65,6 +65,12 @@ Perfect for writers organizing a novel project:
 - Create an "about-characters" or "about-settings" file to keep track of your world-building
 - Use headings within your chapters for easy navigation via the outline feature
 
+## ☕ Support This Project
+
+If you find Current Folder Notes Pane useful on your writing journey, I'd truly appreciate your support. Please consider buying me a coffee on [Ko-fi](https://ko-fi.com/pamelawang_mwahacookie) — your contribution helps me keep making tools that make your creative life easier.
+
+Thank you for being a part of this adventure. Happy writing and organizing your brilliant ideas!
+
 ## ❓ Questions or Feedback?
 
 Love the plugin? Found a bug? Have a feature request? Feel free to reach out!
