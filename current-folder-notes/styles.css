@@ -1,56 +1,619 @@
 /* styles.css */
 
+/* Panel title styling */
+.view-header-title {
+    font-weight: var(--font-medium);
+    letter-spacing: 0.2px;
+    color: var(--text-muted);
+}
+
+/* File items styling */
 .folder-notes-style {
     display: block;
-    margin: 0px;
-    padding: 0px;
+    margin: 1px 0;
+    padding: 3px 6px;
     cursor: pointer;
-    color: var(--text-small);
+    color: var(--text-muted);
     text-decoration: none;
-    font-size: var(--font-ui-medium);
-    /* font-family: var(--font-interface-theme); */
-    line-height: var(--line-height-tight);
-}
-
-.current-file {
-    color: var(--text-accent);
-    padding-top: 0.3em;
-    padding-bottom: 0.3em;
-    background-color: var(--color-base-00);
-    /* background-color: var(--text-selection); */
-    /* background-color: var(--text-highlight-bg); */
-    font-size: var(--font-ui-larger);
-    /* font-family: var(--font-interface-theme); */
-    font-weight: var(--font-bold)
-}
-
-.basic-heading {
-    /* color: var(--text-normal); */
-    /* color: var(--italic-color); */
-    /* Add a little indicator prepend */
-    padding-left: 1em;
-    padding-top: 0.1em;
-    padding-bottom: 0.1em;
     font-size: var(--font-ui-small);
-    /* font-family: var(--font-interface-theme); */
-
+    transition: all 0.15s ease;
+    position: relative;
+    border-left: 2px solid transparent;
 }
 
-.extra-heading-style {
+/* Current file highlighting */
+.current-file {
+    color: var(--text-normal);
+    font-weight: var(--font-medium);
+    border-left: 2px solid var(--text-accent);
+}
+
+/* Base heading styling */
+.basic-heading {
+    margin: 1px 0 1px 16px;
+    padding: 2px 6px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    user-select: none;
+    transition: all 0.15s ease;
+    border-left: 1px solid var(--background-modifier-border);
+    display: flex;
+    align-items: center;
+}
+
+/* Heading level colors with gradient */
+.heading-level-1 {
     color: var(--text-accent);
-    padding-left: 1em;
-    padding-top: 0.1em;
-    padding-bottom: 0.1em;
-    font-size: var(--font-ui-medium);
-    /* background-color: var(--color-base-00); */
-    /* font-family: var(--font-interface-theme); */
+    font-weight: 600;
+    margin-left: 0;
 }
 
+.heading-level-2 {
+    color: color-mix(in srgb, var(--text-accent) 85%, var(--text-muted));
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+.heading-level-3 {
+    color: color-mix(in srgb, var(--text-accent) 70%, var(--text-muted));
+    font-weight: 450;
+    margin-left: 12px;
+}
+
+.heading-level-4 {
+    color: color-mix(in srgb, var(--text-accent) 55%, var(--text-muted));
+    font-weight: 400;
+    margin-left: 18px;
+}
+
+.heading-level-5 {
+    color: color-mix(in srgb, var(--text-accent) 40%, var(--text-muted));
+    margin-left: 24px;
+}
+
+.heading-level-6 {
+    color: color-mix(in srgb, var(--text-accent) 25%, var(--text-muted));
+    margin-left: 30px;
+}
+
+/* Enhanced heading style for current file */
+.extra-heading-style {
+    border-left: 1px solid var(--text-accent);
+}
+
+/* Hover effects */
 .hover-style-file {
-    background-color: var(--interactive-hover);
+    color: var(--text-normal);
+    background-color: transparent;
 }
 
-p.hover-style-heading {
-    /* color: var(--interactive-normal); */
-    background-color: var(--interactive-hover);
+.hover-style-heading {
+    color: var(--text-normal);
+    background-color: transparent;
+}
+
+/* Panel container styling */
+.current-folder-notes-view .view-content {
+    padding: 4px;
+}
+
+/* Group separators for sections */
+.folder-section-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 8px 0 3px 0;
+    padding-bottom: 2px;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+}
+
+/* Empty state styling */
+.empty-state-message {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.empty-state-highlight {
+    color: var(--text-normal);
+}
+
+.empty-state-subtext {
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+    margin-top: 12px;
+    opacity: 0.8;
+}
+
+/* Section styling */
+.notes-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.notes-section {
+    margin-bottom: 8px;
+}
+
+.notes-flat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+    padding: 0 12px;
+}
+
+/* Navigation styling */
+.navigation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 2px 0 8px 0;
+    padding: 2px;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 0;
+    cursor: pointer;
+    width: auto;
+}
+
+.prev-note {
+    margin-right: auto;
+}
+
+.next-note {
+    margin-left: auto;
+}
+
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    margin: 0;  /* Remove margin from arrow */
+}
+
+.nav-direction {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+    white-space: nowrap;
+    opacity: 0.7;
+}
+
+.nav-title-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0 6px;
+}
+
+.prev-note .nav-direction {
+    margin-right: 4px;
+}
+
+.next-note .nav-direction {
+    margin-left: 4px;
+}
+
+.nav-title {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    color: var(--text-accent);
+    opacity: 0.9;
+    padding: 0;  /* Remove padding from number */
+    flex: 0 0 auto;
+    min-width: 24px;
+    text-align: center;
+}
+
+.prev-note .nav-title {
+    order: 1;
+}
+
+.next-note .nav-title {
+    order: 2;
+}
+
+.prev-note .nav-icon {
+    order: 2;
+}
+
+.next-note .nav-icon {
+    order: 1;
+}
+
+.next-note .nav-direction {
+    order: 3;
+}
+
+/* Hover states for navigation */
+.nav-link:hover {
+    color: var(--text-normal);
+}
+
+.nav-link:hover .nav-icon {
+    opacity: 1;
+}
+
+.nav-link:hover .nav-direction {
+    opacity: 1;
+    color: var (--text-accent);
+}
+
+.nav-link:hover .nav-title {
+    color: var(--text-normal);
+}
+
+/* Compact mode adjustments */
+.compact-mode .folder-notes-style {
+    padding: 1px 4px;
+    font-size: var(--font-ui-smaller);
+}
+
+.compact-mode .basic-heading {
+    padding: 1px 4px;
+    font-size: var(--font-ui-smaller);
+}
+
+.compact-mode .navigation-header {
+    margin: 2px 0;
+    padding: 2px;
+    gap: 40px;
+}
+
+.compact-mode .nav-link {
+    width: 100px;
+    padding: 2px 6px;
+    font-size: var(--font-ui-smaller);
+    min-width: 70px;
+    max-width: 100px;
+}
+
+.compact-mode .nav-direction {
+    font-size: 9px;
+    padding: 0 8px;
+}
+
+.compact-mode .nav-title {
+    font-size: var(--font-ui-smaller);
+    padding: 0 2px;
+    min-width: 20px;
+}
+
+.compact-mode .folder-section-header {
+    margin: 8px 0 2px 0;
+}
+
+.compact-mode .navigation-section {
+    padding: 4px 2px;
+}
+
+.compact-mode .outline-section {
+    padding: 4px;
+}
+
+.compact-mode .prev-note {
+    margin-left: 24px;
+}
+
+.compact-mode .next-note {
+    margin-right: 24px;
+}
+
+/* Expanded mode adjustments */
+.expanded-mode .folder-notes-style {
+    padding: 4px 8px;
+    font-size: var(--font-ui-small);
+    margin: 2px 0;
+}
+
+.expanded-mode .basic-heading {
+    padding: 3px 8px;
+}
+
+.expanded-mode .nav-direction {
+    font-size: 12px;
+}
+
+.expanded-mode .nav-title {
+    font-size: var(--font-ui-small);
+}
+
+.expanded-mode .folder-section-header {
+    margin: 16px 0 6px 0;
+}
+
+/* Minimal style adjustments */
+.neobrutalist-style .folder-notes-style,
+.neobrutalist-style .basic-heading {
+    background-color: #ffcc00; /* Bold yellow background */
+    border: 3px solid #000000; /* Thick black border */
+    color: #000000; /* Black text */
+    font-size: 16px; /* Bold font size */
+    padding: 8px;
+    margin: 4px 0;
+    transition: none; /* Remove transitions */
+}
+
+.neobrutalist-style .current-file {
+    background-color: #ff3300; /* Bold red background */
+    border-left: 3px solid #000000; /* Thick black border */
+    font-weight: bold;
+    color: #ffffff; /* White text */
+}
+
+.neobrutalist-style .folder-section-header {
+    border-bottom: 3px solid #000000; /* Thick black border */
+    margin: 8px 0;
+    padding: 4px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #000000; /* Black text */
+}
+
+.neobrutalist-style .nav-link {
+    background: #00ccff; /* Bold blue background */
+    color: #000000; /* Black text */
+    padding: 8px;
+    border: 3px solid #000000; /* Thick black border */
+    border-radius: 0; /* No border radius */
+    transition: none; /* Remove transitions */
+}
+
+.neobrutalist-style .nav-link:hover {
+    background: #00ccff; /* No hover effect */
+    color: #000000; /* No hover effect */
+}
+
+.neobrutalist-style .empty-state-message {
+    background: #ffcc00; /* Bold yellow background */
+    color: #000000; /* Black text */
+    padding: 16px;
+    border: 3px solid #000000; /* Thick black border */
+}
+
+.neobrutalist-style .outline-section {
+    background: #ffffff; /* White background */
+    border: 3px solid #000000; /* Thick black border */
+    padding: 8px;
+    margin: 8px 0;
+}
+
+.neobrutalist-style .section-separator {
+    height: 3px; /* Thick separator */
+    background-color: #000000; /* Black color */
+    margin: 4px 0;
+}
+
+.neobrutalist-style .nav-icon {
+    color: #000000; /* Black color */
+    width: 20px;
+    height: 20px;
+}
+
+.neobrutalist-style .heading-level-1,
+.neobrutalist-style .heading-level-2,
+.neobrutalist-style .heading-level-3,
+.neobrutalist-style .heading-level-4,
+.neobrutalist-style .heading-level-5,
+.neobrutalist-style .heading-level-6 {
+    color: #000000; /* Black text */
+    font-weight: bold;
+    margin-left: 0;
+}
+
+/* Light and dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .neobrutalist-style .folder-notes-style,
+    .neobrutalist-style .basic-heading {
+        background-color: #333333; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .current-file {
+        background-color: #ff3300; /* Bold red background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .folder-section-header {
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .nav-link {
+        background: #444444; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .empty-state-message {
+        background: #333333; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .outline-section {
+        background: #444444; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .nav-icon {
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .heading-level-1,
+    .neobrutalist-style .heading-level-2,
+    .neobrutalist-style .heading-level-3,
+    .neobrutalist-style .heading-level-4,
+    .neobrutalist-style .heading-level-5,
+    .neobrutalist-style .heading-level-6 {
+        color: #ffffff; /* Light text */
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .neobrutalist-style .folder-notes-style,
+    .neobrutalist-style .basic-heading {
+        background-color: #ffcc00; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .current-file {
+        background-color: #ff3300; /* Bold red background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .folder-section-header {
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .nav-link {
+        background: #00ccff; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .empty-state-message {
+        background: #ffcc00; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .outline-section {
+        background: #ffffff; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .nav-icon {
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .heading-level-1,
+    .neobrutalist-style .heading-level-2,
+    .neobrutalist-style .heading-level-3,
+    .neobrutalist-style .heading-level-4,
+    .neobrutalist-style .heading-level-5,
+    .neobrutalist-style .heading-level-6 {
+        color: #000000; /* Dark text */
+    }
+}
+
+/* Fancy style adjustments */
+.fancy-style .folder-notes-style,
+.fancy-style .basic-heading {
+    background-color: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.3s ease;
+    color: var(--text-accent);
+    font-size: var(--font-ui-small);
+    padding: 4px 8px;
+    margin: 2px 0;
+}
+
+.fancy-style .current-file {
+    background-color: var(--background-secondary-alt);
+    border-left: 2px solid var(--text-accent);
+    font-weight: bold;
+    color: var(--text-normal);
+}
+
+.fancy-style .folder-section-header {
+    border-bottom: 1px solid var(--background-modifier-border);
+    opacity: 0.8;
+    margin: 8px 0;
+    padding: 4px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-accent);
+}
+
+.fancy-style .nav-link {
+    background: var(--background-secondary);
+    transition: all 0.3s ease;
+    color: var(--text-accent);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.fancy-style .nav-link:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.fancy-style .empty-state-message {
+    background: var(--background-secondary);
+    color: var(--text-accent);
+    padding: 12px;
+    border-radius: 4px;
+}
+
+.fancy-style .outline-section {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+}
+
+.fancy-style .section-separator {
+    opacity: 0.5;
+    width: 95%;
+    margin: 4px auto;
+    height: 1px;
+    background-color: var(--background-modifier-border);
+}
+
+.fancy-style .nav-icon {
+    opacity: 0.8;
+    color: var(--text-accent);
+}
+
+.fancy-style .heading-level-1,
+.fancy-style .heading-level-2,
+.fancy-style .heading-level-3,
+.fancy-style .heading-level-4,
+.fancy-style .heading-level-5,
+.fancy-style .heading-level-6 {
+    padding-left: 0;
+    color: var(--text-accent);
+    font-weight: bold;
+}
+
+/* Fancy style adjustments */
+.fancy-style .folder-notes-style:hover,
+.fancy-style .basic-heading:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.fancy-style .current-file {
+    background-color: var(--background-secondary-alt);
+}
+
+/* Main content layout */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+}
+
+/* Navigation section centered and distinct */
+.navigation-section {
+    border-radius: 4px;
+    padding: 6px 0;
+    margin: 4px auto;
+    max-width: 95%;
+    text-align: center;
+}
+
+/* Better section separation */
+.section-separator {
+    height: 1px;
+    background-color: var(--background-modifier-border);
+    margin: 2px auto;
+    opacity: 0.3;
+    width: 95%;
+}
+
+/* Outline section more distinct from flat list */
+.outline-section {
+    margin: 6px auto;
+    padding: 6px 8px;
+    max-width: 95%;
+    border-radius: 4px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
 }
