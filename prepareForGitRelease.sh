@@ -18,6 +18,9 @@ mv current-folder-notes.zip release.zip
 # remove the current_release folder
 # rm -rf current-folder-notes
 
-gac "Push for Release"
+# gac "Push for Release" 
+git add -A
+git commit -m "Prepare for Git Release"
+git push origin main
 echo "Use the gh release create command to create a new release"
 echo "gh release create v(XXX) release.zip --notes-file current-folder-notes/notes.md"
