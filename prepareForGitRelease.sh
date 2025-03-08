@@ -21,6 +21,8 @@ mv current-folder-notes.zip release.zip
 # gac "Push for Release" 
 git add -A
 git commit -m "Prepare for Git Release"
-git push origin main
-echo "Creating a new release..."
+# git push origin main
+echo "Pushing to main tag... "
+echo "git push origin tag 1.0.4"
+echo "Creating a new release... "
 echo 'gh release create 1.0.4 release.zip main.js manifest.json styles.css --title "Aesthetics" --notes "Improve aesthetics"'
