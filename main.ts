@@ -16,7 +16,7 @@ interface CurrentFolderNotesDisplaySettings {
 	showNavigation: boolean;
 }
 
-const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
+const DEFAULT_SETTINGS: CurrentFolderNotesDisplaySettings = {
 	excludeTitlesFilter: '_index',
 	includeTitleFilter: '',
 	prettyTitleCase: true,
@@ -161,17 +161,13 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		// Load saved data
 		const savedData = await this.loadData();
 		
-		// Apply defaults
-		this.settings = Object.assign({}, DEFAULT_SETTINGS);
-		
-		// Copy all saved settings that exist
-		if (savedData) {
-			Object.keys(savedData).forEach(key => {
-				if (key in this.settings) {
-					(this.settings as any)[key] = (savedData as any)[key];
-				}
-			});
-		}
+		 // Start with defaults
+		 this.settings = Object.assign({}, DEFAULT_SETTINGS);
+		 
+		 // Merge with saved data if available
+		 if (savedData !== null) {
+			 Object.assign(this.settings, savedData);
+		 }
 	}
 
 	async saveSettings() {
