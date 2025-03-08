@@ -249,7 +249,7 @@
 
 .nav-link:hover .nav-direction {
     opacity: 1;
-    color: var(--text-accent);
+    color: var (--text-accent);
 }
 
 .nav-link:hover .nav-title {
@@ -336,102 +336,240 @@
 }
 
 /* Minimal style adjustments */
-.minimal-style .folder-notes-style,
-.minimal-style .basic-heading {
-    background-color: transparent;
-    border-radius: 0;
-    transition: none;
+.neobrutalist-style .folder-notes-style,
+.neobrutalist-style .basic-heading {
+    background-color: #ffcc00; /* Bold yellow background */
+    border: 3px solid #000000; /* Thick black border */
+    color: #000000; /* Black text */
+    font-size: 16px; /* Bold font size */
+    padding: 8px;
+    margin: 4px 0;
+    transition: none; /* Remove transitions */
 }
 
-.minimal-style .folder-notes-style {
-    border-left-color: transparent;
+.neobrutalist-style .current-file {
+    background-color: #ff3300; /* Bold red background */
+    border-left: 3px solid #000000; /* Thick black border */
+    font-weight: bold;
+    color: #ffffff; /* White text */
 }
 
-.minimal-style .current-file {
-    background-color: transparent;
-    border-left: 1px solid var(--text-accent);
-    font-weight: 500;
+.neobrutalist-style .folder-section-header {
+    border-bottom: 3px solid #000000; /* Thick black border */
+    margin: 8px 0;
+    padding: 4px 0;
+    font-size: 14px;
+    text-transform: uppercase;
+    color: #000000; /* Black text */
 }
 
-.minimal-style .folder-section-header {
-    border-bottom: none;
-    opacity: 0.6;
-    margin: 8px 0 2px 0;
+.neobrutalist-style .nav-link {
+    background: #00ccff; /* Bold blue background */
+    color: #000000; /* Black text */
+    padding: 8px;
+    border: 3px solid #000000; /* Thick black border */
+    border-radius: 0; /* No border radius */
+    transition: none; /* Remove transitions */
 }
 
-.minimal-style .nav-link {
-    background: transparent;
-    transition: none;
+.neobrutalist-style .nav-link:hover {
+    background: #00ccff; /* No hover effect */
+    color: #000000; /* No hover effect */
 }
 
-.minimal-style .nav-link:hover {
-    background: transparent;
-    color: var(--text-accent);
+.neobrutalist-style .empty-state-message {
+    background: #ffcc00; /* Bold yellow background */
+    color: #000000; /* Black text */
+    padding: 16px;
+    border: 3px solid #000000; /* Thick black border */
 }
 
-.minimal-style .empty-state-message {
-    background: transparent;
+.neobrutalist-style .outline-section {
+    background: #ffffff; /* White background */
+    border: 3px solid #000000; /* Thick black border */
+    padding: 8px;
+    margin: 8px 0;
 }
 
-.minimal-style .outline-section {
-    background: none;
-    border: none;
-    border-radius: 0;
-    padding: 0 12px;
-    margin: 8px 0;  /* Increased margin for better section separation */
-    max-width: 100%;
-}
-
-.minimal-style .outline-section + .section-separator + .notes-flat-list {
-    margin-top: 12px;  /* Add extra space after the outline section */
-}
-
-.minimal-style .outline-section .folder-section-header {
-    margin-top: 0;
-    margin-bottom: 8px;  /* Slightly more space below the header */
-}
-
-.minimal-style .section-separator {
-    opacity: 0.15;
-    width: 100%;
+.neobrutalist-style .section-separator {
+    height: 3px; /* Thick separator */
+    background-color: #000000; /* Black color */
     margin: 4px 0;
 }
 
-.minimal-style .nav-icon {
-    opacity: 0.4;
+.neobrutalist-style .nav-icon {
+    color: #000000; /* Black color */
+    width: 20px;
+    height: 20px;
 }
 
-.minimal-style .basic-heading {
-    background-color: transparent;
-    border-radius: 0;
-    transition: none;
+.neobrutalist-style .heading-level-1,
+.neobrutalist-style .heading-level-2,
+.neobrutalist-style .heading-level-3,
+.neobrutalist-style .heading-level-4,
+.neobrutalist-style .heading-level-5,
+.neobrutalist-style .heading-level-6 {
+    color: #000000; /* Black text */
+    font-weight: bold;
     margin-left: 0;
-    border-left: none;
+}
+
+/* Light and dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+    .neobrutalist-style .folder-notes-style,
+    .neobrutalist-style .basic-heading {
+        background-color: #333333; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .current-file {
+        background-color: #ff3300; /* Bold red background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .folder-section-header {
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .nav-link {
+        background: #444444; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .empty-state-message {
+        background: #333333; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .outline-section {
+        background: #444444; /* Dark background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .nav-icon {
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .heading-level-1,
+    .neobrutalist-style .heading-level-2,
+    .neobrutalist-style .heading-level-3,
+    .neobrutalist-style .heading-level-4,
+    .neobrutalist-style .heading-level-5,
+    .neobrutalist-style .heading-level-6 {
+        color: #ffffff; /* Light text */
+    }
+}
+
+@media (prefers-color-scheme: light) {
+    .neobrutalist-style .folder-notes-style,
+    .neobrutalist-style .basic-heading {
+        background-color: #ffcc00; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .current-file {
+        background-color: #ff3300; /* Bold red background */
+        color: #ffffff; /* Light text */
+    }
+    .neobrutalist-style .folder-section-header {
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .nav-link {
+        background: #00ccff; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .empty-state-message {
+        background: #ffcc00; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .outline-section {
+        background: #ffffff; /* Light background */
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .nav-icon {
+        color: #000000; /* Dark text */
+    }
+    .neobrutalist-style .heading-level-1,
+    .neobrutalist-style .heading-level-2,
+    .neobrutalist-style .heading-level-3,
+    .neobrutalist-style .heading-level-4,
+    .neobrutalist-style .heading-level-5,
+    .neobrutalist-style .heading-level-6 {
+        color: #000000; /* Dark text */
+    }
+}
+
+/* Fancy style adjustments */
+.fancy-style .folder-notes-style,
+.fancy-style .basic-heading {
+    background-color: var(--background-modifier-hover);
+    border: 1px solid var(--background-modifier-border);
+    transition: all 0.3s ease;
+    color: var(--text-accent);
+    font-size: var(--font-ui-small);
+    padding: 4px 8px;
+    margin: 2px 0;
+}
+
+.fancy-style .current-file {
+    background-color: var(--background-secondary-alt);
+    border-left: 2px solid var(--text-accent);
+    font-weight: bold;
+    color: var(--text-normal);
+}
+
+.fancy-style .folder-section-header {
+    border-bottom: 1px solid var(--background-modifier-border);
+    opacity: 0.8;
+    margin: 8px 0;
+    padding: 4px 0;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--text-accent);
+}
+
+.fancy-style .nav-link {
+    background: var(--background-secondary);
+    transition: all 0.3s ease;
+    color: var(--text-accent);
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.fancy-style .nav-link:hover {
+    background: var(--background-modifier-hover);
+    color: var(--text-normal);
+}
+
+.fancy-style .empty-state-message {
+    background: var(--background-secondary);
+    color: var(--text-accent);
+    padding: 12px;
+    border-radius: 4px;
+}
+
+.fancy-style .outline-section {
+    background: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
+    padding: 8px 12px;
+    margin: 8px 0;
+    border-radius: 4px;
+}
+
+.fancy-style .section-separator {
+    opacity: 0.5;
+    width: 95%;
+    margin: 4px auto;
+    height: 1px;
+    background-color: var(--background-modifier-border);
+}
+
+.fancy-style .nav-icon {
+    opacity: 0.8;
+    color: var(--text-accent);
+}
+
+.fancy-style .heading-level-1,
+.fancy-style .heading-level-2,
+.fancy-style .heading-level-3,
+.fancy-style .heading-level-4,
+.fancy-style .heading-level-5,
+.fancy-style .heading-level-6 {
     padding-left: 0;
-}
-
-.minimal-style .heading-level-1 {
-    padding-left: 0;
-}
-
-.minimal-style .heading-level-2 {
-    padding-left: 24px;
-}
-
-.minimal-style .heading-level-3 {
-    padding-left: 48px;
-}
-
-.minimal-style .heading-level-4 {
-    padding-left: 72px;
-}
-
-.minimal-style .heading-level-5 {
-    padding-left: 96px;
-}
-
-.minimal-style .heading-level-6 {
-    padding-left: 120px;
+    color: var(--text-accent);
+    font-weight: bold;
 }
 
 /* Fancy style adjustments */
