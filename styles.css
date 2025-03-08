@@ -1,56 +1,481 @@
 /* styles.css */
 
+/* Panel title styling */
+.view-header-title {
+    font-weight: var(--font-medium);
+    letter-spacing: 0.2px;
+    color: var(--text-muted);
+}
+
+/* File items styling */
 .folder-notes-style {
     display: block;
-    margin: 0px;
-    padding: 0px;
+    margin: 1px 0;
+    padding: 3px 6px;
     cursor: pointer;
-    color: var(--text-small);
+    color: var(--text-muted);
     text-decoration: none;
-    font-size: var(--font-ui-medium);
-    /* font-family: var(--font-interface-theme); */
-    line-height: var(--line-height-tight);
-}
-
-.current-file {
-    color: var(--text-accent);
-    padding-top: 0.3em;
-    padding-bottom: 0.3em;
-    background-color: var(--color-base-00);
-    /* background-color: var(--text-selection); */
-    /* background-color: var(--text-highlight-bg); */
-    font-size: var(--font-ui-larger);
-    /* font-family: var(--font-interface-theme); */
-    font-weight: var(--font-bold)
-}
-
-.basic-heading {
-    /* color: var(--text-normal); */
-    /* color: var(--italic-color); */
-    /* Add a little indicator prepend */
-    padding-left: 1em;
-    padding-top: 0.1em;
-    padding-bottom: 0.1em;
     font-size: var(--font-ui-small);
-    /* font-family: var(--font-interface-theme); */
-
+    transition: all 0.15s ease;
+    position: relative;
+    border-left: 2px solid transparent;
 }
 
-.extra-heading-style {
+/* Current file highlighting */
+.current-file {
+    color: var(--text-normal);
+    font-weight: var(--font-medium);
+    border-left: 2px solid var(--text-accent);
+}
+
+/* Base heading styling */
+.basic-heading {
+    margin: 1px 0 1px 16px;
+    padding: 2px 6px;
+    font-size: var(--font-ui-smaller);
+    color: var(--text-muted);
+    user-select: none;
+    transition: all 0.15s ease;
+    border-left: 1px solid var(--background-modifier-border);
+    display: flex;
+    align-items: center;
+}
+
+/* Heading level colors with gradient */
+.heading-level-1 {
     color: var(--text-accent);
-    padding-left: 1em;
-    padding-top: 0.1em;
-    padding-bottom: 0.1em;
-    font-size: var(--font-ui-medium);
-    /* background-color: var(--color-base-00); */
-    /* font-family: var(--font-interface-theme); */
+    font-weight: 600;
+    margin-left: 0;
 }
 
+.heading-level-2 {
+    color: color-mix(in srgb, var(--text-accent) 85%, var(--text-muted));
+    font-weight: 500;
+    margin-left: 6px;
+}
+
+.heading-level-3 {
+    color: color-mix(in srgb, var(--text-accent) 70%, var(--text-muted));
+    font-weight: 450;
+    margin-left: 12px;
+}
+
+.heading-level-4 {
+    color: color-mix(in srgb, var(--text-accent) 55%, var(--text-muted));
+    font-weight: 400;
+    margin-left: 18px;
+}
+
+.heading-level-5 {
+    color: color-mix(in srgb, var(--text-accent) 40%, var(--text-muted));
+    margin-left: 24px;
+}
+
+.heading-level-6 {
+    color: color-mix(in srgb, var(--text-accent) 25%, var(--text-muted));
+    margin-left: 30px;
+}
+
+/* Enhanced heading style for current file */
+.extra-heading-style {
+    border-left: 1px solid var(--text-accent);
+}
+
+/* Hover effects */
 .hover-style-file {
-    background-color: var(--interactive-hover);
+    color: var(--text-normal);
+    background-color: transparent;
 }
 
-p.hover-style-heading {
-    /* color: var(--interactive-normal); */
-    background-color: var(--interactive-hover);
+.hover-style-heading {
+    color: var(--text-normal);
+    background-color: transparent;
+}
+
+/* Panel container styling */
+.current-folder-notes-view .view-content {
+    padding: 4px;
+}
+
+/* Group separators for sections */
+.folder-section-header {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 8px 0 3px 0;
+    padding-bottom: 2px;
+    letter-spacing: 0.5px;
+    opacity: 0.7;
+}
+
+/* Empty state styling */
+.empty-state-message {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: var(--font-ui-small);
+    padding: 12px;
+    margin: 12px 0;
+}
+
+.empty-state-highlight {
+    color: var(--text-normal);
+}
+
+.empty-state-subtext {
+    color: var(--text-faint);
+    font-size: var(--font-ui-smaller);
+    margin-top: 12px;
+    opacity: 0.8;
+}
+
+/* Section styling */
+.notes-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.notes-section {
+    margin-bottom: 8px;
+}
+
+.notes-flat-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+    padding: 0 12px;
+}
+
+/* Navigation styling */
+.navigation-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 2px 0 8px 0;
+    padding: 2px;
+}
+
+.nav-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 0;
+    cursor: pointer;
+    width: auto;
+}
+
+.prev-note {
+    margin-right: auto;
+}
+
+.next-note {
+    margin-left: auto;
+}
+
+.nav-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto;
+    margin: 0;  /* Remove margin from arrow */
+}
+
+.nav-direction {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-faint);
+    white-space: nowrap;
+    opacity: 0.7;
+}
+
+.nav-title-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin: 0 6px;
+}
+
+.prev-note .nav-direction {
+    margin-right: 4px;
+}
+
+.next-note .nav-direction {
+    margin-left: 4px;
+}
+
+.nav-title {
+    font-family: var(--font-monospace);
+    font-size: var(--font-ui-small);
+    color: var(--text-accent);
+    opacity: 0.9;
+    padding: 0;  /* Remove padding from number */
+    flex: 0 0 auto;
+    min-width: 24px;
+    text-align: center;
+}
+
+.prev-note .nav-title {
+    order: 1;
+}
+
+.next-note .nav-title {
+    order: 2;
+}
+
+.prev-note .nav-icon {
+    order: 2;
+}
+
+.next-note .nav-icon {
+    order: 1;
+}
+
+.next-note .nav-direction {
+    order: 3;
+}
+
+/* Hover states for navigation */
+.nav-link:hover {
+    color: var(--text-normal);
+}
+
+.nav-link:hover .nav-icon {
+    opacity: 1;
+}
+
+.nav-link:hover .nav-direction {
+    opacity: 1;
+    color: var(--text-accent);
+}
+
+.nav-link:hover .nav-title {
+    color: var(--text-normal);
+}
+
+/* Compact mode adjustments */
+.compact-mode .folder-notes-style {
+    padding: 1px 4px;
+    font-size: var(--font-ui-smaller);
+}
+
+.compact-mode .basic-heading {
+    padding: 1px 4px;
+    font-size: var(--font-ui-smaller);
+}
+
+.compact-mode .navigation-header {
+    margin: 2px 0;
+    padding: 2px;
+    gap: 40px;
+}
+
+.compact-mode .nav-link {
+    width: 100px;
+    padding: 2px 6px;
+    font-size: var(--font-ui-smaller);
+    min-width: 70px;
+    max-width: 100px;
+}
+
+.compact-mode .nav-direction {
+    font-size: 9px;
+    padding: 0 8px;
+}
+
+.compact-mode .nav-title {
+    font-size: var(--font-ui-smaller);
+    padding: 0 2px;
+    min-width: 20px;
+}
+
+.compact-mode .folder-section-header {
+    margin: 8px 0 2px 0;
+}
+
+.compact-mode .navigation-section {
+    padding: 4px 2px;
+}
+
+.compact-mode .outline-section {
+    padding: 4px;
+}
+
+.compact-mode .prev-note {
+    margin-left: 24px;
+}
+
+.compact-mode .next-note {
+    margin-right: 24px;
+}
+
+/* Expanded mode adjustments */
+.expanded-mode .folder-notes-style {
+    padding: 4px 8px;
+    font-size: var(--font-ui-small);
+    margin: 2px 0;
+}
+
+.expanded-mode .basic-heading {
+    padding: 3px 8px;
+}
+
+.expanded-mode .nav-direction {
+    font-size: 12px;
+}
+
+.expanded-mode .nav-title {
+    font-size: var(--font-ui-small);
+}
+
+.expanded-mode .folder-section-header {
+    margin: 16px 0 6px 0;
+}
+
+/* Minimal style adjustments */
+.minimal-style .folder-notes-style,
+.minimal-style .basic-heading {
+    background-color: transparent;
+    border-radius: 0;
+    transition: none;
+}
+
+.minimal-style .folder-notes-style {
+    border-left-color: transparent;
+}
+
+.minimal-style .current-file {
+    background-color: transparent;
+    border-left: 1px solid var(--text-accent);
+    font-weight: 500;
+}
+
+.minimal-style .folder-section-header {
+    border-bottom: none;
+    opacity: 0.6;
+    margin: 8px 0 2px 0;
+}
+
+.minimal-style .nav-link {
+    background: transparent;
+    transition: none;
+}
+
+.minimal-style .nav-link:hover {
+    background: transparent;
+    color: var(--text-accent);
+}
+
+.minimal-style .empty-state-message {
+    background: transparent;
+}
+
+.minimal-style .outline-section {
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0 12px;
+    margin: 8px 0;  /* Increased margin for better section separation */
+    max-width: 100%;
+}
+
+.minimal-style .outline-section + .section-separator + .notes-flat-list {
+    margin-top: 12px;  /* Add extra space after the outline section */
+}
+
+.minimal-style .outline-section .folder-section-header {
+    margin-top: 0;
+    margin-bottom: 8px;  /* Slightly more space below the header */
+}
+
+.minimal-style .section-separator {
+    opacity: 0.15;
+    width: 100%;
+    margin: 4px 0;
+}
+
+.minimal-style .nav-icon {
+    opacity: 0.4;
+}
+
+.minimal-style .basic-heading {
+    background-color: transparent;
+    border-radius: 0;
+    transition: none;
+    margin-left: 0;
+    border-left: none;
+    padding-left: 0;
+}
+
+.minimal-style .heading-level-1 {
+    padding-left: 0;
+}
+
+.minimal-style .heading-level-2 {
+    padding-left: 24px;
+}
+
+.minimal-style .heading-level-3 {
+    padding-left: 48px;
+}
+
+.minimal-style .heading-level-4 {
+    padding-left: 72px;
+}
+
+.minimal-style .heading-level-5 {
+    padding-left: 96px;
+}
+
+.minimal-style .heading-level-6 {
+    padding-left: 120px;
+}
+
+/* Fancy style adjustments */
+.fancy-style .folder-notes-style:hover,
+.fancy-style .basic-heading:hover {
+    background-color: var(--background-modifier-hover);
+}
+
+.fancy-style .current-file {
+    background-color: var(--background-secondary-alt);
+}
+
+/* Main content layout */
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0;
+}
+
+/* Navigation section centered and distinct */
+.navigation-section {
+    border-radius: 4px;
+    padding: 6px 0;
+    margin: 4px auto;
+    max-width: 95%;
+    text-align: center;
+}
+
+/* Better section separation */
+.section-separator {
+    height: 1px;
+    background-color: var(--background-modifier-border);
+    margin: 2px auto;
+    opacity: 0.3;
+    width: 95%;
+}
+
+/* Outline section more distinct from flat list */
+.outline-section {
+    margin: 6px auto;
+    padding: 6px 8px;
+    max-width: 95%;
+    border-radius: 4px;
+    background-color: var(--background-secondary);
+    border: 1px solid var(--background-modifier-border);
 }

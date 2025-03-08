@@ -22,5 +22,5 @@ mv current-folder-notes.zip release.zip
 git add -A
 git commit -m "Prepare for Git Release"
 git push origin main
-echo "Use the gh release create command to create a new release"
-echo "gh release create v(XXX) release.zip --notes-file current-folder-notes/notes.md"
+echo "Creating a new release..."
+echo 'gh release create 1.0.4 release.zip main.js manifest.json styles.css --title "Aesthetics" --notes "Improve aesthetics"'
