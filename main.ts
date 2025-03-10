@@ -46,20 +46,19 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 		 // Load custom styles
 		this.loadStyles();
-		
+
 		// This adds a settings tab so the user can configure various aspects of the plugin
 		this.addSettingTab(new CurrentFolderNotesDisplaySettingTab(this.app, this));
 
-
-		// add a panel to the right sidebar - view 
+		// add a panel to the right sidebar - view
 		this.registerView(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, (leaf) => new CurrentFolderNotesDisplayView(leaf, this));
-		
+
 		// Add a ribbon icon
 		this.addRibbonIcon('folder', 'Activate folder notes display', () => {
 			this.activateView();
 		});
 
-		// Add a command to open the view 
+		// Add a command to open the view
 		this.addCommand({
 			id: 'activate-folder-notes-display',
 			name: 'Open Pane',
@@ -91,32 +90,32 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 	async onunload() {
 		console.log('unloading plugin');
-		
+
 		// Clean up by detaching any leaves created by this plugin
 		const leavesToDetach = this.app.workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
 		leavesToDetach.forEach(leaf => {
 			leaf.detach();
 		});
-		
+
 		// Clear the leaves array
 		this.leaves = [];
 	}
 
 	async activateView() {
 		const { workspace } = this.app;
-		
+
 		// Clean up existing leaves first to prevent duplicates
 		const existingLeaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
-		
+
 		// Keep only the first leaf if multiple exist
 		if (existingLeaves.length > 1) {
 			for (let i = 1; i < existingLeaves.length; i++) {
 				existingLeaves[i].detach();
 			}
 		}
-		
+
 		let leaf: WorkspaceLeaf | null = null;
-		
+
 		if (existingLeaves.length) {
 			// A leaf with our view already exists, use that
 			leaf = existingLeaves[0];
@@ -140,22 +139,23 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 	async refreshView() {
 		const { workspace } = this.app;
+		console.log("[CFN] Refresh view triggered");
 		const leaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
-		
-		// Make sure we only have one leaf of our type
+		console.log("[CFN] Found leaves:", leaves.length);
+
 		if (leaves.length > 1) {
-			// Keep the first one, detach others
+			console.log("[CFN] Multiple leaves found, cleaning up extras");
 			for (let i = 1; i < leaves.length; i++) {
 				leaves[i].detach();
 			}
 		}
-		
+
 		if (leaves.length === 1) {
-			// A leaf with our view exists, update it
+			console.log("[CFN] Updating existing view");
 			const view = leaves[0].view as CurrentFolderNotesDisplayView;
 			await view.displayNotesInCurrentFolder();
-		} else if (leaves.length === 0) {			
-			// No leaf exists, create one
+		} else if (leaves.length === 0) {
+			console.log("[CFN] No view found, creating new one");
 			this.activateView();
 		}
 	}
@@ -174,10 +174,10 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		const styleEl = document.createElement('style');
 		styleEl.id = 'current-folder-notes-styles';
 		document.head.appendChild(styleEl);
-		
+
 		// Register the stylesheet to be removed when the plugin unloads
 		this.register(() => styleEl.remove());
-		
+
 		// Load the CSS file from the plugin directory
 		this.loadData().then(data => {
 			// You can add default styles here if needed
@@ -193,13 +193,11 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	}
 }
 
-
 export const VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY = "current-folder-notes-view";
 
 export class CurrentFolderNotesDisplayView extends ItemView {
 	plugin: CurrentFolderNotesDisplay;
 
-	
 	constructor(leaf: WorkspaceLeaf, plugin: CurrentFolderNotesDisplay) {
 		super(leaf);
 		this.plugin = plugin;
@@ -215,7 +213,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	getIcon(): string {
 		return 'folder';
-	
+
 	}
 
 	async onOpen() {
@@ -232,7 +230,6 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		}
 
 	// main.ts
-	
 
 	// Function to create clickable headings
 	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string, addExtraHeadingCSS: boolean): void {
@@ -252,18 +249,18 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 					const p: HTMLElement = container.createEl('p', { text: headingLabel });
 					p.classList.add('basic-heading');
 					p.classList.add(`heading-level-${headingLevel}`);
-					
+
 					if (addExtraHeadingCSS) {
 						p.classList.add('extra-heading-style');
 					}
-					
+
 					p.addEventListener('click', async (event) => {
 						// Prevent default behavior
 						event.preventDefault();
-						
+
 						// Use the openLinkText method to navigate to the heading
 						this.app.workspace.openLinkText('#' + headingText, currentFilePath);
-						
+
 						// Clear any text selection
 						const selection = window.getSelection();
 						if (selection) {
@@ -272,7 +269,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 					});
 
 					// Add hover effect
-					p.onmouseover = () => { 
+					p.onmouseover = () => {
 						p.classList.add('hover-style-heading');
 					}
 					// Remove hover effect when not hovering
@@ -294,24 +291,25 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// Try to find T numbers first (e.g., T1, T23)
 		const tMatch = basename.match(/T(\d+)/);
 		if (tMatch) return `T${tMatch[1]}`;
-		
+
 		// Try to find Y numbers next (e.g., Y1, Y2023)
 		const yMatch = basename.match(/Y(\d+)/);
 		if (yMatch) return `Y${yMatch[1]}`;
-		
+
 		// Try to find any numbers
 		const numberMatch = basename.match(/\d+/);
 		if (numberMatch) return numberMatch[0];
-		
+
 		// Try to find text after dash
 		const dashMatch = basename.match(/-\s*(.+)$/);
 		if (dashMatch) return dashMatch[1];
-		
+
 		// If nothing else matches, return the basename
 		return basename;
 	}
 
 	async displayNotesInCurrentFolder(): Promise<void> {
+		console.log("[CFN] Starting displayNotesInCurrentFolder");
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
 
@@ -323,33 +321,66 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// Create header
 		const headerContainer = container.createDiv({ cls: 'folder-view-header' });
 		headerContainer.createEl("h6", { text: "Current Folder Notes" });
-		
-		// Get current file info
+
+		// Get current file info and folder path
 		const activeFile = this.app.workspace.getActiveFile();
+		console.log("[CFN] Active file:", activeFile?.path);
+
 		const currentFilePath = activeFile ? activeFile.path : '';
-		const parentFolderPath = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
-		
-		// Show current folder path
-		if (parentFolderPath) {
-			const pathDisplay = headerContainer.createEl('div', { 
-				cls: 'folder-path-display',
-				text: parentFolderPath
-			});
-			pathDisplay.style.fontSize = 'var(--font-smaller)';
-			pathDisplay.style.color = 'var(--text-muted)';
-			pathDisplay.style.marginBottom = '10px';
-			pathDisplay.style.wordBreak = 'break-word';
+		let parentFolderPath = '';  // Don't default to root
+
+		if (currentFilePath) {
+			const lastSlashIndex = currentFilePath.lastIndexOf('/');
+			parentFolderPath = lastSlashIndex > 0 ? currentFilePath.substring(0, lastSlashIndex) : '';
+			console.log("[CFN] Parent folder path from current file:", parentFolderPath);
+		} else if (this.app.workspace.getActiveViewOfType(MarkdownView)) {
+			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
+			console.log("[CFN] Found active view:", activeView?.file?.path);
+			if (activeView?.file) {
+				const viewFilePath = activeView.file.path;
+				const lastSlashIndex = viewFilePath.lastIndexOf('/');
+				parentFolderPath = lastSlashIndex > 0 ? viewFilePath.substring(0, lastSlashIndex) : '';
+				console.log("[CFN] Parent folder path from view:", parentFolderPath);
+			}
 		}
+
+		// Show warning if no valid folder path found
+		if (!parentFolderPath) {
+			const warningDiv = container.createDiv({ cls: 'empty-state-message' });
+			warningDiv.createEl('p', {
+				text: 'Please open a note in a folder to view related notes.',
+				cls: 'empty-state-highlight'
+			});
+			warningDiv.createEl('p', {
+				text: 'The root folder cannot be shown to prevent performance issues with large vaults.',
+				cls: 'empty-state-subtext'
+			});
+			return;
+		}
+
+		// Show current folder path
+		const pathDisplay = headerContainer.createEl('div', {
+			cls: 'folder-path-display',
+			text: parentFolderPath
+		});
+		pathDisplay.style.fontSize = 'var(--font-smaller)';
+		pathDisplay.style.color = 'var(--text-muted)';
+		pathDisplay.style.marginBottom = '10px';
+		pathDisplay.style.wordBreak = 'break-word';
 
 		// Get and filter files
 		let folder = this.app.vault.getAbstractFileByPath(parentFolderPath);
+		console.log("[CFN] Found folder:", folder?.path);
 		let files: TFile[] = [];
 		if (folder instanceof TFolder) {
 			files = folder.children.filter((file: any) => file instanceof TFile) as TFile[];
+			console.log("[CFN] Initial files count:", files.length);
 		}
 
 		files = this.applyFilters(files, parentFolderPath);
-		
+		console.log("[CFN] Files after filtering:", files.length);
+		console.log("[CFN] Current filters - Include:", this.plugin.settings.includeTitleFilter, "Exclude:", this.plugin.settings.excludeTitlesFilter);
+
 		if (files.length === 0) {
 			this.showEmptyState(container, activeFile, currentFilePath, files);
 			return;
@@ -358,7 +389,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// Sort files by name/sequence
 		const sequenceWithPrefixOrLongest = (str: string) => {
 			const tMatches = str.match(/T(\d+)/);
-			if (tMatches) return parseInt(tMatches[1]); 
+			if (tMatches) return parseInt(tMatches[1]);
 			const yMatches = str.match(/Y(\d+)/);
 			if (yMatches) return parseInt(yMatches[1]) + 1000;
 			const matches = str.match(/\d+/g) || [];
@@ -370,14 +401,14 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Create main content container
 		const mainContent = container.createDiv({ cls: 'main-content' });
-		
+
 		// Show navigation section if enabled and we have a current file
 		if (showNavigation && currentFileIndex !== -1) {
 			const navigationSection = mainContent.createDiv({ cls: 'navigation-section' });
-			
+
 			// Navigation header with prev/next
 			const navHeader = navigationSection.createDiv({ cls: 'navigation-header' });
-			
+
 			// Previous note
 			if (currentFileIndex > 0) {
 				const prevNote = files[currentFileIndex - 1];
@@ -385,8 +416,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				const prevIcon = prevLink.createSpan({ cls: 'nav-icon' });
 				prevIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-left" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 60,20 L 30,50 L 60,80"></path></svg>`;
 				prevLink.createSpan({ cls: 'nav-direction', text: 'Previous' });
-				const prevTitle = prevLink.createSpan({ 
-					cls: 'nav-title', 
+				const prevTitle = prevLink.createSpan({
+					cls: 'nav-title',
 					text: this.getShortNoteName(prevNote.basename)
 				});
 				prevLink.setAttribute('aria-label', `Previous: ${prevNote.basename}`);
@@ -402,8 +433,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				nextLink.createSpan({ cls: 'nav-direction', text: 'Next' });
 				const nextIcon = nextLink.createSpan({ cls: 'nav-icon' });
 				nextIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-right" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 40,20 L 70,50 L 40,80"></path></svg>`;
-				const nextTitle = nextLink.createSpan({ 
-					cls: 'nav-title', 
+				const nextTitle = nextLink.createSpan({
+					cls: 'nav-title',
 					text: this.getShortNoteName(nextNote.basename)
 				});
 				nextLink.setAttribute('aria-label', `Next: ${nextNote.basename}`);
@@ -418,7 +449,14 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				const fileContent = await this.app.vault.read(currentFile);
 				if (fileContent) {
 					const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
-					outlineSection.createEl('div', { 
+
+					// Add current note title
+					outlineSection.createEl('div', {
+						cls: 'current-note-title',
+						text: currentFile.basename
+					});
+
+					outlineSection.createEl('div', {
 						cls: 'folder-section-header',
 						text: 'CURRENT NOTE OUTLINE'
 					});
@@ -432,19 +470,19 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Always show flat list view
 		const listContainer = mainContent.createDiv({ cls: 'notes-flat-list' });
-		listContainer.createEl('div', { 
+		listContainer.createEl('div', {
 			cls: 'folder-section-header',
 			text: 'FOLDER NOTES'
 		});
-		
+
 		for (const file of files) {
 			const isCurrentFile = file.path === currentFilePath;
-			const fileContainer = listContainer.createDiv({ 
-				cls: isCurrentFile ? 'file-container current' : 'file-container' 
+			const fileContainer = listContainer.createDiv({
+				cls: isCurrentFile ? 'file-container current' : 'file-container'
 			});
 
 			this.createFileLink(fileContainer, file, currentFilePath, parentFolderPath);
-			
+
 			if (this.plugin.settings.includeListFileOutlines) {
 				const fileContent = await this.app.vault.read(file);
 				if (fileContent) {
@@ -459,11 +497,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		container.classList.toggle('minimal-style', styleMode === 'minimal');
 		container.classList.toggle('fancy-style', styleMode === 'fancy');
 		container.classList.toggle('neobrutalist-style', styleMode === 'neobrutalist');
-		const shouldApplyBiggerText = this.plugin.settings.biggerText && 
+		const shouldApplyBiggerText = this.plugin.settings.biggerText &&
 			(!this.plugin.settings.biggerTextMobileOnly || (this.app as any).isMobile);
 		container.classList.toggle('bigger-text', shouldApplyBiggerText);
-
-
 
 	}
 
@@ -471,26 +507,26 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	createFileLink(container: HTMLElement, file: any, currentFilePath: string, parentFolderPath: string): void {
 		const p = container.createEl('p');
 		const a = p.createEl('a', { text: file.basename });
-		
+
 		if (this.plugin.settings.prettyTitleCase) {
 			a.innerText = a.innerText.replace(/\w\S*/g, function(txt) {
 				return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
 			});
 		}
-		
+
 		// Apply styling
 		a.className = 'folder-notes-style';
-		
+
 		// If current file, add special styling
 		if (file.path === currentFilePath) {
 			a.className += ' current-file';
 			a.innerText = '\u2605 ' + a.innerText;
 		}
-		
+
 		// Add hover effects
 		a.onmouseover = () => a.classList.add('hover-style-file');
 		a.onmouseout = () => a.classList.remove('hover-style-file');
-		
+
 		// Add click handler to open the file
 		a.addEventListener('click', () => {
 			this.app.workspace.openLinkText(file.basename, parentFolderPath);
@@ -501,32 +537,32 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	private showEmptyState(container: HTMLElement, activeFile: TFile | null, currentFilePath: string, files: TFile[]): void {
 		const emptyStateDiv = container.createDiv({ cls: 'empty-state-message' });
 		if (files.length === 0) {
-			emptyStateDiv.createEl('p', { 
+			emptyStateDiv.createEl('p', {
 				text: 'No notes found. If you have recently added or moved notes, Obsidian might still be indexing them. Please wait a moment and try again.',
 				cls: 'empty-state-highlight'
 			});
 		}
 		if (this.plugin.settings.includeTitleFilter) {
-			emptyStateDiv.createEl('p', { 
+			emptyStateDiv.createEl('p', {
 				text: `🔍 No notes match the current filter "${this.plugin.settings.includeTitleFilter}".`,
 				cls: 'empty-state-highlight'
 			});
 		} else if (this.plugin.settings.excludeTitlesFilter) {
-			emptyStateDiv.createEl('p', { 
+			emptyStateDiv.createEl('p', {
 				text: `All notes are currently filtered out by the exclude pattern "${this.plugin.settings.excludeTitlesFilter}"`,
 			});
 		} else {
-			emptyStateDiv.createEl('p', { 
+			emptyStateDiv.createEl('p', {
 				text: 'This folder is empty',
 			});
 		}
-		
+
 		if (currentFilePath && activeFile) {
 			emptyStateDiv.createEl('p', {
 				text: 'Showing outline of current note:',
 				cls: 'empty-state-subtext'
 			});
-			
+
 			this.app.vault.read(activeFile).then(fileContent => {
 				if (fileContent) {
 					this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
@@ -537,34 +573,41 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	private applyFilters(files: TFile[], parentFolderPath: string): TFile[] {
 		let filteredFiles = files;
-	
+		console.log("[CFN] Starting filter with files:", files.length);
+
 		// Apply subfolder filter
 		if (!this.plugin.settings.includeSubfolderNotes) {
+			const beforeCount = filteredFiles.length;
 			filteredFiles = filteredFiles.filter(file => !file.path.substring(parentFolderPath.length + 1).includes('/'));
+			console.log("[CFN] After subfolder filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
 		}
-	
+
 		// Apply include filter
 		const includesFilter = this.plugin.settings.includeTitleFilter;
 		if (includesFilter && includesFilter.length > 0) {
+			const beforeCount = filteredFiles.length;
 			const includeWords = includesFilter.split(/[,\s]+/).map(word => word.trim().toLowerCase());
 			if (includeWords.length > 0) {
-				filteredFiles = filteredFiles.filter(file => 
+				filteredFiles = filteredFiles.filter(file =>
 					includeWords.some(word => file.basename.toLowerCase().includes(word))
 				);
+				console.log("[CFN] After include filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
 			}
 		}
-	
+
 		// Apply exclude filter
 		const excludeFilter = this.plugin.settings.excludeTitlesFilter;
 		if (excludeFilter && excludeFilter.length > 0) {
+			const beforeCount = filteredFiles.length;
 			const excludeWords = excludeFilter.split(/[,\s]+/).map(word => word.trim().toLowerCase());
 			if (excludeWords.length > 0) {
-				filteredFiles = filteredFiles.filter(file => 
+				filteredFiles = filteredFiles.filter(file =>
 					!excludeWords.some(word => file.basename.toLowerCase().includes(word))
 				);
+				console.log("[CFN] After exclude filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
 			}
 		}
-	
+
 		return filteredFiles;
 	}
 }
@@ -581,7 +624,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		const {containerEl} = this;
 
 		containerEl.empty();
-		
+
 		// Add some CSS for styling the settings
 		containerEl.createEl('style', {
 			text: `
@@ -614,7 +657,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		// Title section with plugin description
 		const titleEl = containerEl.createDiv({ cls: 'settings-section' });
 		titleEl.createEl('h2', { text: 'Current Folder Notes Settings' });
-		titleEl.createEl('p', { 
+		titleEl.createEl('p', {
 			cls: 'settings-section-description',
 			text: 'Configure how notes from the current folder are displayed in the panel.'
 		});
@@ -622,11 +665,11 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		// Filter settings section
 		const filtersEl = containerEl.createDiv({ cls: 'settings-section' });
 		filtersEl.createEl('h3', { cls: 'settings-section-header', text: '📂 Filter Settings' });
-		filtersEl.createEl('p', { 
+		filtersEl.createEl('p', {
 			cls: 'settings-section-description',
 			text: 'Control which notes appear in the folder notes panel.'
 		});
-		
+
 		new Setting(filtersEl)
 			.setName('Exclude titles filter')
 			.setDesc('Notes containing these words will be hidden. Separate multiple words with commas.')
@@ -637,7 +680,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					this.plugin.settings.excludeTitlesFilter = value;
 					await this.plugin.saveSettings();
 				}));
-		
+
 		new Setting(filtersEl)
 			.setName('Include titles filter')
 			.setDesc('Only notes containing these words will be shown. Leave empty to show all notes. Separate multiple words with commas.')
@@ -652,7 +695,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		// Display options section
 		const displayEl = containerEl.createDiv({ cls: 'settings-section' });
 		displayEl.createEl('h3', { cls: 'settings-section-header', text: '🖥️ Display Options' });
-		displayEl.createEl('p', { 
+		displayEl.createEl('p', {
 			cls: 'settings-section-description',
 			text: 'Control how notes and their contents are displayed in the panel.'
 		});
@@ -667,7 +710,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					await this.plugin.saveSettings();
 					this.plugin.refreshView();
 				}));
-		
+
 		new Setting(displayEl)
 			.setName('Pretty title case')
 			.setDesc('Convert note titles to Title Case for better readability.')
@@ -730,11 +773,11 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		// Content options section
 		const contentEl = containerEl.createDiv({ cls: 'settings-section' });
 		contentEl.createEl('h3', { cls: 'settings-section-header', text: '📝 Content Options' });
-		contentEl.createEl('p', { 
+		contentEl.createEl('p', {
 			cls: 'settings-section-description',
 			text: 'Configure what content is included in the folder notes panel.'
 		});
-		
+
 		new Setting(contentEl)
 			.setName('Include subfolder notes')
 			.setDesc('Show notes from subfolders within the current folder.')
@@ -744,7 +787,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					this.plugin.settings.includeSubfolderNotes = value;
 					await this.plugin.saveSettings();
 				}));
-		
+
 		new Setting(contentEl)
 			.setName('Show outline in current file section')
 			.setDesc('Display headings from the currently active file at the top of the panel.')
@@ -754,7 +797,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					this.plugin.settings.includeCurrentFileOutline = value;
 					await this.plugin.saveSettings();
 				}));
-		
+
 		new Setting(contentEl)
 			.setName('Show outline in files list')
 			.setDesc('Display headings under each file in the folder notes list.')
@@ -768,11 +811,11 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 		// About section with help text
 		const aboutEl = containerEl.createDiv({ cls: 'settings-section' });
 		aboutEl.createEl('h3', { cls: 'settings-section-header', text: 'ℹ️ About' });
-		aboutEl.createEl('p', { 
+		aboutEl.createEl('p', {
 			cls: 'settings-section-description',
 			text: 'Current Folder Notes displays notes and outlines from the current folder for quick navigation. Changes to settings will apply immediately.'
 		});
-		
+
 		// Add a refresh button to explicitly refresh the view
 		new Setting(aboutEl)
 			.setName('Refresh panel')
