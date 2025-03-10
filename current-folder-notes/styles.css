@@ -16,7 +16,7 @@
     color: var(--text-muted);
     text-decoration: none;
     font-size: var(--font-ui-small);
-    transition: all 0.15s ease;
+    transition: color 0.05s ease, border-left-color 0.1s ease;
     position: relative;
     border-left: 2px solid transparent;
 }
@@ -35,7 +35,7 @@
     font-size: var(--font-ui-smaller);
     color: var(--text-muted);
     user-select: none;
-    transition: all 0.15s ease;
+    transition: color 0.05s ease;
     border-left: 1px solid var(--background-modifier-border);
     display: flex;
     align-items: center;
@@ -162,6 +162,7 @@
     padding: 4px 0;
     cursor: pointer;
     width: auto;
+    transition: color 0.05s ease;
 }
 
 .prev-note {
@@ -181,6 +182,7 @@
     height: 16px;
     flex: 0 0 auto;
     margin: 0;  /* Remove margin from arrow */
+    transition: opacity 0.05s ease;
 }
 
 .nav-direction {
@@ -500,7 +502,7 @@
 .fancy-style .basic-heading {
     background-color: var(--background-modifier-hover);
     border: 1px solid var(--background-modifier-border);
-    transition: all 0.3s ease;
+    transition: color 0.05s ease;
     color: var(--text-accent);
     font-size: var(--font-ui-small);
     padding: 4px 8px;
@@ -526,7 +528,7 @@
 
 .fancy-style .nav-link {
     background: var(--background-secondary);
-    transition: all 0.3s ease;
+    transition: background-color 0.05s ease, color 0.05s ease;
     color: var(--text-accent);
     padding: 4px 8px;
     border-radius: 4px;
@@ -647,3 +649,38 @@
 .bigger-text .nav-title {
     font-size: 1.3em;
 }
+
+/* Add current note title styling */
+.current-note-title {
+    font-size: var(--font-ui-large);
+    color: var(--text-normal);
+    font-weight: var(--font-bold);
+    margin: 4px 0 12px 0;
+    padding: 8px;
+    text-align: center;
+    border-bottom: 1px solid var(--background-modifier-border);
+}
+
+.fancy-style .current-note-title {
+    color: var(--text-accent);
+    background: var(--background-primary);
+    border-radius: 4px 4px 0 0;
+}
+
+.minimal-style .current-note-title {
+    border-bottom: none;
+    padding: 4px;
+}
+
+.neobrutalist-style .current-note-title {
+    background: var(--background-primary);
+    border: 3px solid #000000;
+    margin: 0 0 8px 0;
+    padding: 12px;
+}
+
+/* Bigger text adjustments */
+.bigger-text .current-note-title {
+    font-size: 1.4em;
+}
+
