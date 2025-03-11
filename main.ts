@@ -139,23 +139,23 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 	async refreshView() {
 		const { workspace } = this.app;
-		console.log("[CFN] Refresh view triggered");
+		// console.log("[CFN] Refresh view triggered");
 		const leaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
-		console.log("[CFN] Found leaves:", leaves.length);
+		// console.log("[CFN] Found leaves:", leaves.length);
 
 		if (leaves.length > 1) {
-			console.log("[CFN] Multiple leaves found, cleaning up extras");
+			// console.log("[CFN] Multiple leaves found, cleaning up extras");
 			for (let i = 1; i < leaves.length; i++) {
 				leaves[i].detach();
 			}
 		}
 
 		if (leaves.length === 1) {
-			console.log("[CFN] Updating existing view");
+			// console.log("[CFN] Updating existing view");
 			const view = leaves[0].view as CurrentFolderNotesDisplayView;
 			await view.displayNotesInCurrentFolder();
 		} else if (leaves.length === 0) {
-			console.log("[CFN] No view found, creating new one");
+			// console.log("[CFN] No view found, creating new one");
 			this.activateView();
 		}
 	}
@@ -309,7 +309,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async displayNotesInCurrentFolder(): Promise<void> {
-		console.log("[CFN] Starting displayNotesInCurrentFolder");
+		// console.log("[CFN] Starting displayNotesInCurrentFolder");
 		const container = this.containerEl.children[1] as HTMLElement;
 		container.empty();
 
@@ -324,7 +324,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Get current file info and folder path
 		const activeFile = this.app.workspace.getActiveFile();
-		console.log("[CFN] Active file:", activeFile?.path);
+		// console.log("[CFN] Active file:", activeFile?.path);
 
 		const currentFilePath = activeFile ? activeFile.path : '';
 		let parentFolderPath = '';  // Don't default to root
@@ -332,15 +332,15 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		if (currentFilePath) {
 			const lastSlashIndex = currentFilePath.lastIndexOf('/');
 			parentFolderPath = lastSlashIndex > 0 ? currentFilePath.substring(0, lastSlashIndex) : '';
-			console.log("[CFN] Parent folder path from current file:", parentFolderPath);
+			// console.log("[CFN] Parent folder path from current file:", parentFolderPath);
 		} else if (this.app.workspace.getActiveViewOfType(MarkdownView)) {
 			const activeView = this.app.workspace.getActiveViewOfType(MarkdownView);
-			console.log("[CFN] Found active view:", activeView?.file?.path);
+			// console.log("[CFN] Found active view:", activeView?.file?.path);
 			if (activeView?.file) {
 				const viewFilePath = activeView.file.path;
 				const lastSlashIndex = viewFilePath.lastIndexOf('/');
 				parentFolderPath = lastSlashIndex > 0 ? viewFilePath.substring(0, lastSlashIndex) : '';
-				console.log("[CFN] Parent folder path from view:", parentFolderPath);
+				// console.log("[CFN] Parent folder path from view:", parentFolderPath);
 			}
 		}
 
@@ -370,16 +370,16 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Get and filter files
 		let folder = this.app.vault.getAbstractFileByPath(parentFolderPath);
-		console.log("[CFN] Found folder:", folder?.path);
+		// console.log("[CFN] Found folder:", folder?.path);
 		let files: TFile[] = [];
 		if (folder instanceof TFolder) {
 			files = folder.children.filter((file: any) => file instanceof TFile) as TFile[];
-			console.log("[CFN] Initial files count:", files.length);
+			// console.log("[CFN] Initial files count:", files.length);
 		}
 
 		files = this.applyFilters(files, parentFolderPath);
-		console.log("[CFN] Files after filtering:", files.length);
-		console.log("[CFN] Current filters - Include:", this.plugin.settings.includeTitleFilter, "Exclude:", this.plugin.settings.excludeTitlesFilter);
+		// console.log("[CFN] Files after filtering:", files.length);
+		// console.log("[CFN] Current filters - Include:", this.plugin.settings.includeTitleFilter, "Exclude:", this.plugin.settings.excludeTitlesFilter);
 
 		if (files.length === 0) {
 			this.showEmptyState(container, activeFile, currentFilePath, files);
@@ -573,13 +573,13 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	private applyFilters(files: TFile[], parentFolderPath: string): TFile[] {
 		let filteredFiles = files;
-		console.log("[CFN] Starting filter with files:", files.length);
+		// console.log("[CFN] Starting filter with files:", files.length);
 
 		// Apply subfolder filter
 		if (!this.plugin.settings.includeSubfolderNotes) {
 			const beforeCount = filteredFiles.length;
 			filteredFiles = filteredFiles.filter(file => !file.path.substring(parentFolderPath.length + 1).includes('/'));
-			console.log("[CFN] After subfolder filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
+			// console.log("[CFN] After subfolder filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
 		}
 
 		// Apply include filter
@@ -591,7 +591,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				filteredFiles = filteredFiles.filter(file =>
 					includeWords.some(word => file.basename.toLowerCase().includes(word))
 				);
-				console.log("[CFN] After include filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
+				// console.log("[CFN] After include filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
 			}
 		}
 
@@ -604,7 +604,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				filteredFiles = filteredFiles.filter(file =>
 					!excludeWords.some(word => file.basename.toLowerCase().includes(word))
 				);
-				console.log("[CFN] After exclude filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
+				// console.log("[CFN] After exclude filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
 			}
 		}
 
