@@ -1,7 +1,7 @@
 {
 	"id": "current-folder-notes-pamphlet",
 	"name": "Current Folder Notes",
-	"version": "1.7.10",
+	"version": "1.7.11",
 	"minAppVersion": "1.7.7",
 	"description": "Shows a list of notes in the current folder, and allows you to filter the titles to include or exclude notes.",
 	"author": "Pamela Wang",
