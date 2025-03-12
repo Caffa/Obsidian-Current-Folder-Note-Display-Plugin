@@ -10,7 +10,6 @@ interface CurrentFolderNotesDisplaySettings {
 	includeSubfolderNotes: boolean;
 	includeCurrentFileOutline: boolean;
 	includeListFileOutlines: boolean;
-	displayMode: 'compact' | 'expanded';
 	styleMode: 'minimal' | 'fancy' | 'neobrutalist';
 	showNavigation: boolean;
 	biggerText: boolean; // Add this line
@@ -24,7 +23,6 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	includeSubfolderNotes: false,
 	includeCurrentFileOutline: true,
 	includeListFileOutlines: false,
-	displayMode: 'expanded',
 	styleMode: 'fancy',
 	showNavigation: false,
 	biggerText: false,
@@ -67,25 +65,20 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			}
 		});
 
-		// when file is changes (opened) in the editor, update the view
-		this.registerEvent(this.app.workspace.on('file-open', async (file) => {
-			this.refreshView();
-		}));
+		 // Add debouncing for refreshView
+		let refreshTimeout: NodeJS.Timeout | null = null;
+		const debouncedRefresh = () => {
+			if (refreshTimeout) clearTimeout(refreshTimeout);
+			refreshTimeout = setTimeout(() => {
+				this.refreshView();
+			}, 300); // Wait 300ms before refreshing
+		};
 
-		// when a file is deleted, update the view
-		this.registerEvent(this.app.vault.on('delete', async (file) => {
-			this.refreshView();
-		}));
-
-		// when a file is created, update the view
-		this.registerEvent(this.app.vault.on('create', async (file) => {
-			this.refreshView();
-		}));
-
-		// when a file is renamed, update the view
-		this.registerEvent(this.app.vault.on('rename', async (file) => {
-			this.refreshView();
-		}));
+		// Use debounced refresh for all file events
+		this.registerEvent(this.app.workspace.on('file-open', debouncedRefresh));
+		this.registerEvent(this.app.vault.on('delete', debouncedRefresh));
+		this.registerEvent(this.app.vault.on('create', debouncedRefresh));
+		this.registerEvent(this.app.vault.on('rename', debouncedRefresh));
 	}
 
 	async onunload() {
@@ -233,50 +226,81 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	// Function to create clickable headings
 	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string, addExtraHeadingCSS: boolean): void {
-		const headings: RegExpMatchArray | null = currentFileContent.match(/^(#+)\s+(.*)$/gm);
-		if (headings) {
-			headings.forEach((heading: string) => {
-				const headingLevelMatch: RegExpMatchArray | null = heading.match(/^(#+)/);
-				if (headingLevelMatch) {
-					const headingLevel: number = headingLevelMatch[0].length;
-					let headingText: string = heading.replace(/^(#+)\s+/, '');
+		// Set a maximum limit on the file content to process for safety
+		const MAX_CONTENT_SIZE = 500000; // 500KB max processing size
 
-					// Use extractAlias to get the alias from the heading text
-					headingText = this.extractAlias(headingText);
-					// Add a right arrow symbol to the heading text
-					let headingLabel = '→ ' + headingText;
+		if (currentFileContent.length > MAX_CONTENT_SIZE) {
+			currentFileContent = currentFileContent.substring(0, MAX_CONTENT_SIZE);
+			// Add a note that content was truncated
+			container.createEl('p', {
+				cls: 'content-truncated-note',
+				text: 'Note is very large. Only showing headings from the first portion.'
+			});
+		}
 
-					const p: HTMLElement = container.createEl('p', { text: headingLabel });
-					p.classList.add('basic-heading');
-					p.classList.add(`heading-level-${headingLevel}`);
+		// Use a more efficient regex approach for large files
+		const headingRegex = /^(#+)\s+(.*)$/gm;
+		let match;
+		let headingCount = 0;
+		const MAX_HEADINGS = 100; // Limit the number of headings displayed
 
-					if (addExtraHeadingCSS) {
-						p.classList.add('extra-heading-style');
-					}
+		// Process headings in batches for very large files
+		try {
+			while ((match = headingRegex.exec(currentFileContent)) !== null && headingCount < MAX_HEADINGS) {
+				const headingLevel = match[1].length;
+				let headingText = match[2];
 
-					p.addEventListener('click', async (event) => {
-						// Prevent default behavior
-						event.preventDefault();
+				// Use extractAlias to get the alias from the heading text
+				headingText = this.extractAlias(headingText);
+				// Add a right arrow symbol to the heading text
+				let headingLabel = '→ ' + headingText;
 
-						// Use the openLinkText method to navigate to the heading
-						this.app.workspace.openLinkText('#' + headingText, currentFilePath);
+				const p: HTMLElement = container.createEl('p', { text: headingLabel });
+				p.classList.add('basic-heading');
+				p.classList.add(`heading-level-${headingLevel}`);
 
-						// Clear any text selection
-						const selection = window.getSelection();
-						if (selection) {
-							selection.removeAllRanges();
-						}
-					});
-
-					// Add hover effect
-					p.onmouseover = () => {
-						p.classList.add('hover-style-heading');
-					}
-					// Remove hover effect when not hovering
-					p.onmouseout = () => {
-						p.classList.remove('hover-style-heading');
-					}
+				if (addExtraHeadingCSS) {
+					p.classList.add('extra-heading-style');
 				}
+
+				p.addEventListener('click', (event) => {
+					// Prevent default behavior
+					event.preventDefault();
+
+					// Use the openLinkText method to navigate to the heading
+					this.app.workspace.openLinkText('#' + headingText, currentFilePath);
+
+					// Clear any text selection
+					const selection = window.getSelection();
+					if (selection) {
+						selection.removeAllRanges();
+					}
+				});
+
+				// Add hover effect
+				p.onmouseover = () => {
+					p.classList.add('hover-style-heading');
+				}
+				// Remove hover effect when not hovering
+				p.onmouseout = () => {
+					p.classList.remove('hover-style-heading');
+				}
+
+				headingCount++;
+			}
+
+			// Indicate if there are more headings not shown
+			if (headingCount >= MAX_HEADINGS) {
+				container.createEl('p', {
+					cls: 'more-headings-note',
+					text: '... more headings available (not shown)'
+				});
+			}
+		} catch (err) {
+			console.error("Error processing headings:", err);
+			container.createEl('p', {
+				cls: 'error-note',
+				text: 'Error processing headings'
 			});
 		}
 	}
@@ -314,7 +338,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		container.empty();
 
 		// Get display settings
-		const displayMode = this.plugin.settings.displayMode;
+		// const displayMode = this.plugin.settings.displayMode; // Removed
 		const styleMode = this.plugin.settings.styleMode;
 		const showNavigation = this.plugin.settings.showNavigation;
 
@@ -443,25 +467,41 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				});
 			}
 
-			// Current note outline
+			// Current note outline - LAZY LOAD
 			if (this.plugin.settings.includeCurrentFileOutline) {
 				const currentFile = files[currentFileIndex];
-				const fileContent = await this.app.vault.read(currentFile);
-				if (fileContent) {
-					const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
+				// Create the outline section first
+				const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
 
-					// Add current note title
-					outlineSection.createEl('div', {
-						cls: 'current-note-title',
-						text: currentFile.basename
-					});
+				// Add current note title
+				outlineSection.createEl('div', {
+					cls: 'current-note-title',
+					text: currentFile.basename
+				});
 
-					outlineSection.createEl('div', {
-						cls: 'folder-section-header',
-						text: 'CURRENT NOTE OUTLINE'
-					});
-					this.createClickableHeadings(outlineSection, fileContent, currentFile.path, true);
-				}
+				outlineSection.createEl('div', {
+					cls: 'folder-section-header',
+					text: 'CURRENT NOTE OUTLINE'
+				});
+
+				// Add a loading indicator
+				const loadingEl = outlineSection.createEl('div', {
+					cls: 'loading-indicator',
+					text: 'Loading outline...'
+				});
+
+				// Load content asynchronously
+				setTimeout(async () => {
+					const fileContent = await this.app.vault.read(currentFile);
+					if (fileContent) {
+						// Remove loading indicator
+						loadingEl.remove();
+						// Create the headings
+						this.createClickableHeadings(outlineSection, fileContent, currentFile.path, true);
+					} else {
+						loadingEl.setText('No content found');
+					}
+				}, 10);
 			}
 
 			// Add separator
@@ -475,25 +515,69 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			text: 'FOLDER NOTES'
 		});
 
-		for (const file of files) {
-			const isCurrentFile = file.path === currentFilePath;
-			const fileContainer = listContainer.createDiv({
-				cls: isCurrentFile ? 'file-container current' : 'file-container'
-			});
+		// OPTIMIZE: Limit the number of files displayed at once to prevent memory issues
+		const MAX_FILES_DISPLAY = 100; // Adjust based on testing
+		const displayedFiles = files.slice(0, MAX_FILES_DISPLAY);
+		const hasMoreFiles = files.length > MAX_FILES_DISPLAY;
 
-			this.createFileLink(fileContainer, file, currentFilePath, parentFolderPath);
+		// Process files in batches to prevent UI freezing
+		const BATCH_SIZE = 20;
+		const processBatch = async (startIdx: number) => {
+			const endIdx = Math.min(startIdx + BATCH_SIZE, displayedFiles.length);
 
-			if (this.plugin.settings.includeListFileOutlines) {
-				const fileContent = await this.app.vault.read(file);
-				if (fileContent) {
-					this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
+			for (let i = startIdx; i < endIdx; i++) {
+				const file = displayedFiles[i];
+				const isCurrentFile = file.path === currentFilePath;
+				const fileContainer = listContainer.createDiv({
+					cls: isCurrentFile ? 'file-container current' : 'file-container'
+				});
+
+				this.createFileLink(fileContainer, file, currentFilePath, parentFolderPath);
+
+				// Only load outlines if explicitly enabled
+				if (this.plugin.settings.includeListFileOutlines) {
+					// Add a placeholder initially
+					const outlinePlaceholder = fileContainer.createEl('div', {
+						cls: 'outline-placeholder',
+						text: 'Loading outline...'
+					});
+
+					// Load outline in the next animation frame
+					requestAnimationFrame(async () => {
+						try {
+							const fileContent = await this.app.vault.read(file);
+							outlinePlaceholder.remove();
+							if (fileContent) {
+								this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
+							}
+						} catch (err) {
+							console.error("Error loading outline:", err);
+							outlinePlaceholder.setText("Failed to load outline");
+						}
+					});
 				}
 			}
-		}
+
+			// Process next batch if needed
+			if (endIdx < displayedFiles.length) {
+				setTimeout(() => processBatch(endIdx), 50);
+			}
+
+			// Show message if we're not displaying all files
+			if (hasMoreFiles && endIdx === displayedFiles.length) {
+				listContainer.createEl('div', {
+					cls: 'more-files-message',
+					text: `Showing ${MAX_FILES_DISPLAY} of ${files.length} notes. Use filters to narrow results.`
+				});
+			}
+		};
+
+		// Start processing the first batch
+		processBatch(0);
 
 		// Apply display classes
-		container.classList.toggle('compact-mode', displayMode === 'compact');
-		container.classList.toggle('expanded-mode', displayMode === 'expanded');
+		container.classList.add('compact-mode'); // Always use compact mode
+		// container.classList.toggle('expanded-mode', displayMode === 'expanded'); // Removed
 		container.classList.toggle('minimal-style', styleMode === 'minimal');
 		container.classList.toggle('fancy-style', styleMode === 'fancy');
 		container.classList.toggle('neobrutalist-style', styleMode === 'neobrutalist');
@@ -563,52 +647,79 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				cls: 'empty-state-subtext'
 			});
 
-			this.app.vault.read(activeFile).then(fileContent => {
-				if (fileContent) {
-					this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
-				}
+			// Add a loading indicator
+			const loadingEl = emptyStateDiv.createEl('div', {
+				cls: 'loading-indicator',
+				text: 'Loading outline...'
 			});
+
+			// Load content asynchronously with timeout to prevent blocking UI
+			setTimeout(async () => {
+				try {
+					const fileContent = await this.app.vault.read(activeFile);
+					if (fileContent) {
+						// Remove loading indicator
+						loadingEl.remove();
+						// Create the headings with a limited subset of content if it's large
+						const contentSize = fileContent.length;
+						if (contentSize > 100000) { // If content is very large (>100KB)
+							const truncatedContent = fileContent.substring(0, 100000);
+							this.createClickableHeadings(container as HTMLElement, truncatedContent, currentFilePath, true);
+							container.createEl('p', {
+								text: 'Note is very large. Only showing first portion of headings.',
+								cls: 'empty-state-subtext'
+							});
+						} else {
+							this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
+						}
+					} else {
+						loadingEl.setText('No content found');
+					}
+				} catch (err) {
+					console.error("Error loading outline:", err);
+					loadingEl.setText("Failed to load outline");
+				}
+			}, 10);
 		}
 	}
 
 	private applyFilters(files: TFile[], parentFolderPath: string): TFile[] {
-		let filteredFiles = files;
-		// console.log("[CFN] Starting filter with files:", files.length);
-
-		// Apply subfolder filter
-		if (!this.plugin.settings.includeSubfolderNotes) {
-			const beforeCount = filteredFiles.length;
-			filteredFiles = filteredFiles.filter(file => !file.path.substring(parentFolderPath.length + 1).includes('/'));
-			// console.log("[CFN] After subfolder filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
-		}
-
-		// Apply include filter
-		const includesFilter = this.plugin.settings.includeTitleFilter;
-		if (includesFilter && includesFilter.length > 0) {
-			const beforeCount = filteredFiles.length;
-			const includeWords = includesFilter.split(/[,\s]+/).map(word => word.trim().toLowerCase());
-			if (includeWords.length > 0) {
-				filteredFiles = filteredFiles.filter(file =>
-					includeWords.some(word => file.basename.toLowerCase().includes(word))
-				);
-				// console.log("[CFN] After include filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
+		// Create a single-pass filter function to avoid multiple array iterations
+		return files.filter(file => {
+			// Skip files in subfolders if that setting is disabled
+			if (!this.plugin.settings.includeSubfolderNotes &&
+				file.path.substring(parentFolderPath.length + 1).includes('/')) {
+				return false;
 			}
-		}
 
-		// Apply exclude filter
-		const excludeFilter = this.plugin.settings.excludeTitlesFilter;
-		if (excludeFilter && excludeFilter.length > 0) {
-			const beforeCount = filteredFiles.length;
-			const excludeWords = excludeFilter.split(/[,\s]+/).map(word => word.trim().toLowerCase());
-			if (excludeWords.length > 0) {
-				filteredFiles = filteredFiles.filter(file =>
-					!excludeWords.some(word => file.basename.toLowerCase().includes(word))
-				);
-				// console.log("[CFN] After exclude filter:", filteredFiles.length, "removed:", beforeCount - filteredFiles.length);
+			const lowerBasename = file.basename.toLowerCase();
+
+			// Check exclude filter
+			const excludeFilter = this.plugin.settings.excludeTitlesFilter;
+			if (excludeFilter && excludeFilter.length > 0) {
+				const excludeWords = excludeFilter.split(/[,\s]+/).filter(word => word.trim().length > 0)
+					.map(word => word.trim().toLowerCase());
+
+				if (excludeWords.length > 0 &&
+					excludeWords.some(word => lowerBasename.includes(word))) {
+					return false;
+				}
 			}
-		}
 
-		return filteredFiles;
+			// Check include filter
+			const includesFilter = this.plugin.settings.includeTitleFilter;
+			if (includesFilter && includesFilter.length > 0) {
+				const includeWords = includesFilter.split(/[,\s]+/).filter(word => word.trim().length > 0)
+					.map(word => word.trim().toLowerCase());
+
+				if (includeWords.length > 0 &&
+					!includeWords.some(word => lowerBasename.includes(word))) {
+					return false;
+				}
+			}
+
+			return true;
+		});
 	}
 }
 
@@ -718,18 +829,6 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.prettyTitleCase)
 				.onChange(async (value) => {
 					this.plugin.settings.prettyTitleCase = value;
-					await this.plugin.saveSettings();
-				}));
-
-		new Setting(displayEl)
-			.setName('Display mode')
-			.setDesc('Choose between compact and expanded display modes.')
-			.addDropdown(dropdown => dropdown
-				.addOption('compact', 'Compact')
-				.addOption('expanded', 'Expanded')
-				.setValue(this.plugin.settings.displayMode)
-				.onChange(async (value) => {
-					this.plugin.settings.displayMode = value as 'compact' | 'expanded';
 					await this.plugin.saveSettings();
 				}));
 
