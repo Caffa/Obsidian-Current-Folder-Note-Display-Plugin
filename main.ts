@@ -14,6 +14,7 @@ interface CurrentFolderNotesDisplaySettings {
 	showNavigation: boolean;
 	biggerText: boolean; // Add this line
 	biggerTextMobileOnly: boolean; // Add this new setting
+	maxFilesDisplay: number; // Add new setting for max files to display
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
@@ -26,7 +27,8 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	styleMode: 'fancy',
 	showNavigation: false,
 	biggerText: false,
-	biggerTextMobileOnly: false // Add default value
+	biggerTextMobileOnly: false,
+	maxFilesDisplay: 100 // Default to showing 100 files
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
@@ -516,7 +518,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		});
 
 		// OPTIMIZE: Limit the number of files displayed at once to prevent memory issues
-		const MAX_FILES_DISPLAY = 100; // Adjust based on testing
+		const MAX_FILES_DISPLAY = this.plugin.settings.maxFilesDisplay; // Use the setting value
 		const displayedFiles = files.slice(0, MAX_FILES_DISPLAY);
 		const hasMoreFiles = files.length > MAX_FILES_DISPLAY;
 
@@ -905,6 +907,19 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.includeListFileOutlines = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Maximum files to display')
+			.setDesc('Limit the number of files shown in the folder notes list. Use a lower value for better performance in large folders.')
+			.addSlider(slider => slider
+				.setLimits(10, 500, 10)
+				.setValue(this.plugin.settings.maxFilesDisplay)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.maxFilesDisplay = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshView();
 				}));
 
 		// About section with help text
