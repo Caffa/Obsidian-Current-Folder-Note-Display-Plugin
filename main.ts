@@ -448,7 +448,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				});
 				prevLink.setAttribute('aria-label', `Previous: ${prevNote.basename}`);
 				prevLink.addEventListener('click', () => {
-					this.app.workspace.openLinkText(prevNote.basename, parentFolderPath);
+					// Use the full path to handle duplicate file names
+					this.app.workspace.openLinkText(prevNote.path, '');
 				});
 			}
 
@@ -465,7 +466,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				});
 				nextLink.setAttribute('aria-label', `Next: ${nextNote.basename}`);
 				nextLink.addEventListener('click', () => {
-					this.app.workspace.openLinkText(nextNote.basename, parentFolderPath);
+					// Use the full path to handle duplicate file names
+					this.app.workspace.openLinkText(nextNote.path, '');
 				});
 			}
 
@@ -615,7 +617,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Add click handler to open the file
 		a.addEventListener('click', () => {
-			this.app.workspace.openLinkText(file.basename, parentFolderPath);
+			// Use the full path instead of just basename to handle duplicate file names
+			this.app.workspace.openLinkText(file.path, '');
 		});
 	}
 
