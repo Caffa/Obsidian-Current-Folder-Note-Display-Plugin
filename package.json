@@ -1,6 +1,6 @@
 {
 	"name": "current-folder-notes-pamphlet",
-	"version": "1.7.12",
+	"version": "1.7.13",
 	"description": "Shows a list of notes in the current folder, and allows you to filter the titles to include or exclude notes.",
 	"main": "main.js",
 	"scripts": {
@@ -22,4 +22,3 @@
 		"typescript": "4.7.4"
 	}
 }
-
