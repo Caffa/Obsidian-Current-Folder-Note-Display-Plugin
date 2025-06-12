@@ -147,8 +147,18 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 		if (leaves.length === 1) {
 			// console.log("[CFN] Updating existing view");
-			const view = leaves[0].view as CurrentFolderNotesDisplayView;
-			await view.displayNotesInCurrentFolder();
+			const leaf = leaves[0];
+			const view = leaf.view;
+
+			// Check if view is an instance of CurrentFolderNotesDisplayView
+			if (view && view instanceof CurrentFolderNotesDisplayView) {
+				await view.displayNotesInCurrentFolder();
+			} else {
+				// If the view doesn't have the expected method, recreate it
+				console.log("[CFN] View is not a CurrentFolderNotesDisplayView, recreating view");
+				leaf.detach();
+				await this.activateView();
+			}
 		} else if (leaves.length === 0) {
 			// console.log("[CFN] No view found, creating new one");
 			this.activateView();
