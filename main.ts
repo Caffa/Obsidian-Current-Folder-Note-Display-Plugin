@@ -753,10 +753,16 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 	plugin: CurrentFolderNotesDisplay;
+	private debouncedSave: ReturnType<typeof debounce>;
 
 	constructor(app: App, plugin: CurrentFolderNotesDisplay) {
 		super(app, plugin);
 		this.plugin = plugin;
+		// Create a debounced save function that waits 300ms before saving
+		this.debouncedSave = debounce(async () => {
+			await this.plugin.saveSettings();
+			this.plugin.refreshView();
+		}, 300, false);
 	}
 
 	display(): void {
@@ -817,7 +823,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.excludeTitlesFilter)
 				.onChange(async (value) => {
 					this.plugin.settings.excludeTitlesFilter = value;
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		new Setting(filtersEl)
@@ -828,7 +834,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.includeTitleFilter)
 				.onChange(async (value) => {
 					this.plugin.settings.includeTitleFilter = value;
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		// Display options section
@@ -846,8 +852,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.showNavigation)
 				.onChange(async (value) => {
 					this.plugin.settings.showNavigation = value;
-					await this.plugin.saveSettings();
-					this.plugin.refreshView();
+					this.debouncedSave();
 				}));
 
 		new Setting(displayEl)
@@ -857,6 +862,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.prettyTitleCase)
 				.onChange(async (value) => {
 					this.plugin.settings.prettyTitleCase = value;
+					// No refresh needed for title case, only save
 					await this.plugin.saveSettings();
 				}));
 
@@ -870,8 +876,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.styleMode)
 				.onChange(async (value) => {
 					this.plugin.settings.styleMode = value as 'minimal' | 'fancy' | 'neobrutalist';
-					await this.plugin.saveSettings();
-					this.plugin.refreshView();
+					this.debouncedSave();
 				}));
 
 		new Setting(displayEl)
@@ -881,8 +886,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.biggerText)
 				.onChange(async (value) => {
 					this.plugin.settings.biggerText = value;
-					await this.plugin.saveSettings();
-					this.plugin.refreshView();
+					this.debouncedSave();
 				}));
 
 			// Add this after the existing biggerText setting
@@ -893,8 +897,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 					.setValue(this.plugin.settings.biggerTextMobileOnly)
 					.onChange(async (value) => {
 						this.plugin.settings.biggerTextMobileOnly = value;
-						await this.plugin.saveSettings();
-						this.plugin.refreshView();
+						this.debouncedSave();
 					}));
 
 		// Content options section
@@ -912,7 +915,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.includeSubfolderNotes)
 				.onChange(async (value) => {
 					this.plugin.settings.includeSubfolderNotes = value;
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		new Setting(contentEl)
@@ -922,6 +925,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.includeCurrentFileOutline)
 				.onChange(async (value) => {
 					this.plugin.settings.includeCurrentFileOutline = value;
+					// No refresh needed for current file outline setting
 					await this.plugin.saveSettings();
 				}));
 
@@ -932,7 +936,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.includeListFileOutlines)
 				.onChange(async (value) => {
 					this.plugin.settings.includeListFileOutlines = value;
-					await this.plugin.saveSettings();
+					this.debouncedSave();
 				}));
 
 		new Setting(contentEl)
@@ -942,8 +946,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setValue(this.plugin.settings.showAllFilesOnFilterMismatch)
 				.onChange(async (value) => {
 					this.plugin.settings.showAllFilesOnFilterMismatch = value;
-					await this.plugin.saveSettings();
-					this.plugin.refreshView();
+					this.debouncedSave();
 				}));
 
 		new Setting(contentEl)
@@ -955,8 +958,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.setDynamicTooltip()
 				.onChange(async (value) => {
 					this.plugin.settings.maxFilesDisplay = value;
-					await this.plugin.saveSettings();
-					this.plugin.refreshView();
+					this.debouncedSave();
 				}));
 
 		// About section with help text
