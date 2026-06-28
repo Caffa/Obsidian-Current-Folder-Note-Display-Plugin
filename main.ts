@@ -237,7 +237,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	// Function to create clickable headings
 	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string, addExtraHeadingCSS: boolean): void {
 		// Set a maximum limit on the file content to process for safety
-		const MAX_CONTENT_SIZE = 500000; // 500KB max processing size
+		// Reduced from 500KB to 50KB for better performance
+		const MAX_CONTENT_SIZE = 50000; // 50KB max processing size
 
 		if (currentFileContent.length > MAX_CONTENT_SIZE) {
 			currentFileContent = currentFileContent.substring(0, MAX_CONTENT_SIZE);
@@ -678,34 +679,34 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				text: 'Loading outline...'
 			});
 
-			// Load content asynchronously with timeout to prevent blocking UI
-			setTimeout(async () => {
-				try {
-					const fileContent = await this.app.vault.cachedRead(activeFile);
-					if (fileContent) {
-						// Remove loading indicator
-						loadingEl.remove();
-						// Create the headings with a limited subset of content if it's large
-						const contentSize = fileContent.length;
-						if (contentSize > 100000) { // If content is very large (>100KB)
-							const truncatedContent = fileContent.substring(0, 100000);
-							this.createClickableHeadings(container as HTMLElement, truncatedContent, currentFilePath, true);
-							container.createEl('p', {
-								text: 'Note is very large. Only showing first portion of headings.',
-								cls: 'empty-state-subtext'
-							});
+				// Load content asynchronously with timeout to prevent blocking UI
+				setTimeout(async () => {
+					try {
+						const fileContent = await this.app.vault.cachedRead(activeFile);
+						if (fileContent) {
+							// Remove loading indicator
+							loadingEl.remove();
+							// Create the headings with a limited subset of content if it's large
+							const contentSize = fileContent.length;
+							if (contentSize > 50000) { // If content is very large (>50KB)
+								const truncatedContent = fileContent.substring(0, 50000);
+								this.createClickableHeadings(container as HTMLElement, truncatedContent, currentFilePath, true);
+								container.createEl('p', {
+									text: 'Note is very large. Only showing first portion of headings.',
+									cls: 'empty-state-subtext'
+								});
+							} else {
+								this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
+							}
 						} else {
-							this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
+							loadingEl.setText('No content found');
 						}
-					} else {
-						loadingEl.setText('No content found');
+					} catch (err) {
+						console.error("Error loading outline:", err);
+						loadingEl.setText("Failed to load outline");
 					}
-				} catch (err) {
-					console.error("Error loading outline:", err);
-					loadingEl.setText("Failed to load outline");
-				}
-			}, 10);
-		}
+				}, 10);
+			}
 	}
 
 	private applyFilters(files: TFile[], parentFolderPath: string, skipIncludeFilter: boolean = false): TFile[] {
