@@ -234,7 +234,58 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	// main.ts
 
-	// Function to create clickable headings
+	// Optimized: Use Obsidian's metadata cache for headings when available
+	createClickableHeadingsFromCache(container: HTMLElement, file: TFile, addExtraHeadingCSS: boolean): boolean {
+		const cache = this.app.metadataCache.getFileCache(file);
+		if (!cache || !cache.headings || cache.headings.length === 0) {
+			return false; // No cached headings available
+		}
+
+		const MAX_HEADINGS = 100;
+		const headings = cache.headings.slice(0, MAX_HEADINGS);
+
+		for (const heading of headings) {
+			let headingText = heading.heading;
+			headingText = this.extractAlias(headingText);
+			const headingLabel = '→ ' + headingText;
+			const headingLevel = heading.level;
+
+			const p: HTMLElement = container.createEl('p', { text: headingLabel });
+			p.classList.add('basic-heading');
+			p.classList.add(`heading-level-${headingLevel}`);
+
+			if (addExtraHeadingCSS) {
+				p.classList.add('extra-heading-style');
+			}
+
+			p.addEventListener('click', (event) => {
+				event.preventDefault();
+				this.app.workspace.openLinkText('#' + headingText, file.path);
+				const selection = window.getSelection();
+				if (selection) {
+					selection.removeAllRanges();
+				}
+			});
+
+			p.onmouseover = () => {
+				p.classList.add('hover-style-heading');
+			};
+			p.onmouseout = () => {
+				p.classList.remove('hover-style-heading');
+			};
+		}
+
+		if (cache.headings.length > MAX_HEADINGS) {
+			container.createEl('p', {
+				cls: 'more-headings-note',
+				text: '... more headings available (not shown)'
+			});
+		}
+
+		return true; // Successfully used cache
+	}
+
+	// Function to create clickable headings (fallback when cache is unavailable)
 	createClickableHeadings(container: HTMLElement, currentFileContent: string, currentFilePath: string, addExtraHeadingCSS: boolean): void {
 		// Set a maximum limit on the file content to process for safety
 		// Reduced from 500KB to 50KB for better performance
@@ -531,16 +582,26 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 					text: 'Loading outline...'
 				});
 
-				// Load content asynchronously
+				// Try using metadata cache first (faster), fallback to file read
 				setTimeout(async () => {
-					const fileContent = await this.app.vault.cachedRead(currentFile);
-					if (fileContent) {
-						// Remove loading indicator
-						loadingEl.remove();
-						// Create the headings
-						this.createClickableHeadings(outlineSection, fileContent, currentFile.path, true);
-					} else {
-						loadingEl.setText('No content found');
+					loadingEl.remove();
+
+					// Try cache first
+					const usedCache = this.createClickableHeadingsFromCache(outlineSection, currentFile, true);
+
+					if (!usedCache) {
+						// Fallback to file read if cache unavailable
+						try {
+							const fileContent = await this.app.vault.cachedRead(currentFile);
+							if (fileContent) {
+								this.createClickableHeadings(outlineSection, fileContent, currentFile.path, true);
+							} else {
+								outlineSection.createEl('p', { text: 'No content found', cls: 'empty-state-subtext' });
+							}
+						} catch (err) {
+							console.error("Error loading outline:", err);
+							outlineSection.createEl('p', { text: 'Failed to load outline', cls: 'error-note' });
+						}
 					}
 				}, 10);
 			}
@@ -615,10 +676,18 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 					// Queue the file read instead of immediate async
 					queueFileRead(async () => {
 						try {
-							const fileContent = await this.app.vault.cachedRead(file);
-							outlinePlaceholder.remove();
-							if (fileContent) {
-								this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
+							// Try cache first (faster)
+							const usedCache = this.createClickableHeadingsFromCache(fileContainer, file, isCurrentFile);
+
+							if (!usedCache) {
+								// Fallback to file read if cache unavailable
+								const fileContent = await this.app.vault.cachedRead(file);
+								outlinePlaceholder.remove();
+								if (fileContent) {
+									this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
+								}
+							} else {
+								outlinePlaceholder.remove();
 							}
 						} catch (err) {
 							console.error("Error loading outline:", err);
