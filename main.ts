@@ -204,6 +204,7 @@ export const VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY = "current-folder-notes-view
 
 export class CurrentFolderNotesDisplayView extends ItemView {
 	plugin: CurrentFolderNotesDisplay;
+	private titleCaseCache = new Map<string, string>();
 
 	constructor(leaf: WorkspaceLeaf, plugin: CurrentFolderNotesDisplay) {
 		super(leaf);
@@ -732,9 +733,17 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const a = p.createEl('a', { text: file.basename });
 
 		if (this.plugin.settings.prettyTitleCase) {
-			a.innerText = a.innerText.replace(/\w\S*/g, function(txt) {
-				return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
-			});
+			// Use cached title case to avoid repeated regex operations
+			const cachedTitle = this.titleCaseCache.get(file.basename);
+			if (cachedTitle) {
+				a.innerText = cachedTitle;
+			} else {
+				const titleCased = file.basename.replace(/\w\S*/g, (txt: string) => {
+					return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
+				});
+				this.titleCaseCache.set(file.basename, titleCased);
+				a.innerText = titleCased;
+			}
 		}
 
 		// Apply styling
