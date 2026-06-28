@@ -545,6 +545,35 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const displayedFiles = files.slice(0, MAX_FILES_DISPLAY);
 		const hasMoreFiles = files.length > MAX_FILES_DISPLAY;
 
+		// Queue-based file reading with concurrency limit to prevent memory issues
+		const MAX_CONCURRENT_READS = 5;
+		let activeReads = 0;
+		let readQueue: Array<() => Promise<void>> = [];
+		let isProcessingQueue = false;
+
+		const processQueue = async () => {
+			if (isProcessingQueue) return;
+			isProcessingQueue = true;
+
+			while (readQueue.length > 0 && activeReads < MAX_CONCURRENT_READS) {
+				const task = readQueue.shift();
+				if (task) {
+					activeReads++;
+					task().finally(() => {
+						activeReads--;
+						processQueue();
+					});
+				}
+			}
+
+			isProcessingQueue = false;
+		};
+
+		const queueFileRead = (task: () => Promise<void>) => {
+			readQueue.push(task);
+			processQueue();
+		};
+
 		// Process files in batches to prevent UI freezing
 		const BATCH_SIZE = 20;
 		const processBatch = async (startIdx: number) => {
@@ -567,8 +596,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 						text: 'Loading outline...'
 					});
 
-					// Load outline in the next animation frame
-					requestAnimationFrame(async () => {
+					// Queue the file read instead of immediate async
+					queueFileRead(async () => {
 						try {
 							const fileContent = await this.app.vault.cachedRead(file);
 							outlinePlaceholder.remove();
