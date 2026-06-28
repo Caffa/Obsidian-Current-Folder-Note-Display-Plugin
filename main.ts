@@ -1,7 +1,17 @@
-import { App, Notice, Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
-import { ItemView, WorkspaceLeaf } from "obsidian";
-import { MarkdownView } from "obsidian";
-import { TFolder } from "obsidian";
+import {
+	App,
+	Notice,
+	Plugin,
+	PluginSettingTab,
+	Setting,
+	TFile,
+	ItemView,
+	WorkspaceLeaf,
+	MarkdownView,
+	TFolder,
+	Platform,
+	debounce
+} from 'obsidian';
 
 interface CurrentFolderNotesDisplaySettings {
 	excludeTitlesFilter: string;
@@ -15,6 +25,7 @@ interface CurrentFolderNotesDisplaySettings {
 	biggerText: boolean; // Add this line
 	biggerTextMobileOnly: boolean; // Add this new setting
 	maxFilesDisplay: number; // Add new setting for max files to display
+	showAllFilesOnFilterMismatch: boolean; // Show all files when include filter has no matches
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
@@ -28,12 +39,12 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	showNavigation: false,
 	biggerText: false,
 	biggerTextMobileOnly: false,
-	maxFilesDisplay: 100 // Default to showing 100 files
+	maxFilesDisplay: 100, // Default to showing 100 files
+	showAllFilesOnFilterMismatch: true // Default to showing all files when filter has no matches
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
-	settings: CurrentFolderNotesDisplaySettings;
-	public leaves: WorkspaceLeaf[] = [];
+	settings!: CurrentFolderNotesDisplaySettings;
 
 	fileChangeHandler(file: TFile) {
 		if (file instanceof TFile) {
@@ -67,14 +78,10 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			}
 		});
 
-		 // Add debouncing for refreshView
-		let refreshTimeout: NodeJS.Timeout | null = null;
-		const debouncedRefresh = () => {
-			if (refreshTimeout) clearTimeout(refreshTimeout);
-			refreshTimeout = setTimeout(() => {
-				this.refreshView();
-			}, 300); // Wait 300ms before refreshing
-		};
+		// Use Obsidian's built-in debounce helper for better performance
+		const debouncedRefresh = debounce(() => {
+			this.refreshView();
+		}, 300, false);
 
 		// Use debounced refresh for all file events
 		this.registerEvent(this.app.workspace.on('file-open', debouncedRefresh));
@@ -91,9 +98,6 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		leavesToDetach.forEach(leaf => {
 			leaf.detach();
 		});
-
-		// Clear the leaves array
-		this.leaves = [];
 	}
 
 	async activateView() {
@@ -120,8 +124,6 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 			leaf = workspace.getRightLeaf(false);
 			if (leaf) {
 				await leaf.setViewState({ type: VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY, active: true });
-				// Only add to leaves array if it's a new leaf
-				this.leaves.push(leaf);
 			}
 		}
 
@@ -227,12 +229,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async onClose() {
-			// Remove this leaf from the plugin's leaves array to avoid memory leaks
-			const index = this.plugin.leaves.indexOf(this.leaf);
-			if (index > -1) {
-				this.plugin.leaves.splice(index, 1);
-			}
-		}
+		// View cleanup is handled automatically by Obsidian
+	}
 
 	// main.ts
 
@@ -408,14 +406,26 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		let folder = this.app.vault.getAbstractFileByPath(parentFolderPath);
 		// console.log("[CFN] Found folder:", folder?.path);
 		let files: TFile[] = [];
-		if (folder instanceof TFolder) {
-			files = folder.children.filter((file: any) => file instanceof TFile) as TFile[];
-			// console.log("[CFN] Initial files count:", files.length);
+
+		// Null check: folder may not exist if deleted or path is invalid
+		if (!folder || !(folder instanceof TFolder)) {
+			this.showEmptyState(container, activeFile, currentFilePath, []);
+			return;
 		}
+
+		files = folder.children.filter((file: any) => file instanceof TFile) as TFile[];
+		// console.log("[CFN] Initial files count:", files.length);
 
 		files = this.applyFilters(files, parentFolderPath);
 		// console.log("[CFN] Files after filtering:", files.length);
 		// console.log("[CFN] Current filters - Include:", this.plugin.settings.includeTitleFilter, "Exclude:", this.plugin.settings.excludeTitlesFilter);
+
+		// Check if include filter is set but has no matches
+		const hasIncludeFilter = this.plugin.settings.includeTitleFilter && this.plugin.settings.includeTitleFilter.length > 0;
+		if (files.length === 0 && hasIncludeFilter && this.plugin.settings.showAllFilesOnFilterMismatch && folder) {
+			// Re-fetch files without the include filter to show all files
+			files = this.applyFilters(folder.children.filter((file: any) => file instanceof TFile) as TFile[], parentFolderPath, true);
+		}
 
 		if (files.length === 0) {
 			this.showEmptyState(container, activeFile, currentFilePath, files);
@@ -506,7 +516,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 				// Load content asynchronously
 				setTimeout(async () => {
-					const fileContent = await this.app.vault.read(currentFile);
+					const fileContent = await this.app.vault.cachedRead(currentFile);
 					if (fileContent) {
 						// Remove loading indicator
 						loadingEl.remove();
@@ -559,7 +569,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 					// Load outline in the next animation frame
 					requestAnimationFrame(async () => {
 						try {
-							const fileContent = await this.app.vault.read(file);
+							const fileContent = await this.app.vault.cachedRead(file);
 							outlinePlaceholder.remove();
 							if (fileContent) {
 								this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
@@ -596,7 +606,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		container.classList.toggle('fancy-style', styleMode === 'fancy');
 		container.classList.toggle('neobrutalist-style', styleMode === 'neobrutalist');
 		const shouldApplyBiggerText = this.plugin.settings.biggerText &&
-			(!this.plugin.settings.biggerTextMobileOnly || (this.app as any).isMobile);
+			(!this.plugin.settings.biggerTextMobileOnly || Platform.isMobile);
 		container.classList.toggle('bigger-text', shouldApplyBiggerText);
 
 	}
@@ -671,7 +681,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			// Load content asynchronously with timeout to prevent blocking UI
 			setTimeout(async () => {
 				try {
-					const fileContent = await this.app.vault.read(activeFile);
+					const fileContent = await this.app.vault.cachedRead(activeFile);
 					if (fileContent) {
 						// Remove loading indicator
 						loadingEl.remove();
@@ -698,7 +708,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		}
 	}
 
-	private applyFilters(files: TFile[], parentFolderPath: string): TFile[] {
+	private applyFilters(files: TFile[], parentFolderPath: string, skipIncludeFilter: boolean = false): TFile[] {
 		// Create a single-pass filter function to avoid multiple array iterations
 		return files.filter(file => {
 			// Skip files in subfolders if that setting is disabled
@@ -721,15 +731,17 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				}
 			}
 
-			// Check include filter
-			const includesFilter = this.plugin.settings.includeTitleFilter;
-			if (includesFilter && includesFilter.length > 0) {
-				const includeWords = includesFilter.split(/[,\s]+/).filter(word => word.trim().length > 0)
-					.map(word => word.trim().toLowerCase());
+			// Check include filter (skip if requested)
+			if (!skipIncludeFilter) {
+				const includesFilter = this.plugin.settings.includeTitleFilter;
+				if (includesFilter && includesFilter.length > 0) {
+					const includeWords = includesFilter.split(/[,\s]+/).filter(word => word.trim().length > 0)
+						.map(word => word.trim().toLowerCase());
 
-				if (includeWords.length > 0 &&
-					!includeWords.some(word => lowerBasename.includes(word))) {
-					return false;
+					if (includeWords.length > 0 &&
+						!includeWords.some(word => lowerBasename.includes(word))) {
+						return false;
+					}
 				}
 			}
 
@@ -920,6 +932,17 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.includeListFileOutlines = value;
 					await this.plugin.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Show all files when filter has no matches')
+			.setDesc('When enabled, if the include filter finds no matching files, show all files in the folder instead. When disabled, show only the current file outline when no files match.')
+			.addToggle(toggle => toggle
+				.setValue(this.plugin.settings.showAllFilesOnFilterMismatch)
+				.onChange(async (value) => {
+					this.plugin.settings.showAllFilesOnFilterMismatch = value;
+					await this.plugin.saveSettings();
+					this.plugin.refreshView();
 				}));
 
 		new Setting(contentEl)
