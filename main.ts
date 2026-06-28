@@ -433,17 +433,33 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			return;
 		}
 
-		// Sort files by name/sequence
-		const sequenceWithPrefixOrLongest = (str: string) => {
+		// Sort files by name/sequence (with cached sort keys for performance)
+		const sortKeyCache = new Map<string, number>();
+
+		const getSortKey = (str: string): number => {
+			if (sortKeyCache.has(str)) {
+				return sortKeyCache.get(str)!;
+			}
+
 			const tMatches = str.match(/T(\d+)/);
-			if (tMatches) return parseInt(tMatches[1]);
-			const yMatches = str.match(/Y(\d+)/);
-			if (yMatches) return parseInt(yMatches[1]) + 1000;
-			const matches = str.match(/\d+/g) || [];
-			return Math.max(...matches.map(numStr => parseInt(numStr)), 0);
+			let key: number;
+			if (tMatches) {
+				key = parseInt(tMatches[1]);
+			} else {
+				const yMatches = str.match(/Y(\d+)/);
+				if (yMatches) {
+					key = parseInt(yMatches[1]) + 1000;
+				} else {
+					const matches = str.match(/\d+/g) || [];
+					key = Math.max(...matches.map(numStr => parseInt(numStr)), 0);
+				}
+			}
+
+			sortKeyCache.set(str, key);
+			return key;
 		};
 
-		files.sort((a, b) => sequenceWithPrefixOrLongest(a.basename) - sequenceWithPrefixOrLongest(b.basename));
+		files.sort((a, b) => getSortKey(a.basename) - getSortKey(b.basename));
 		const currentFileIndex = files.findIndex(file => file.path === currentFilePath);
 
 		// Create main content container
