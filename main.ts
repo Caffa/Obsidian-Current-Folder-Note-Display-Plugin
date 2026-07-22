@@ -26,6 +26,7 @@ interface CurrentFolderNotesDisplaySettings {
 	biggerTextMobileOnly: boolean; // Add this new setting
 	maxFilesDisplay: number; // Add new setting for max files to display
 	showAllFilesOnFilterMismatch: boolean; // Show all files when include filter has no matches
+	autoRefreshInterval: number; // Auto-refresh interval in minutes (0 disables)
 }
 
 const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
@@ -40,16 +41,36 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 	biggerText: false,
 	biggerTextMobileOnly: false,
 	maxFilesDisplay: 100, // Default to showing 100 files
-	showAllFilesOnFilterMismatch: true // Default to showing all files when filter has no matches
+	showAllFilesOnFilterMismatch: true, // Default to showing all files when filter has no matches
+	autoRefreshInterval: 10 // Default to refreshing every 10 minutes
 }
 
 export default class CurrentFolderNotesDisplay extends Plugin {
 	settings!: CurrentFolderNotesDisplaySettings;
+	private refreshIntervalId: number | null = null;
 
 	fileChangeHandler(file: TFile) {
 		if (file instanceof TFile) {
 			this.load();
 		}
+	}
+
+	setupAutoRefresh() {
+		// Clear any existing interval timer before setting up a new one
+		if (this.refreshIntervalId !== null) {
+			window.clearInterval(this.refreshIntervalId);
+			this.refreshIntervalId = null;
+		}
+
+		const intervalMinutes = this.settings.autoRefreshInterval;
+		if (intervalMinutes <= 0) {
+			return;
+		}
+
+		const intervalMs = intervalMinutes * 60 * 1000;
+		this.refreshIntervalId = window.setInterval(() => {
+			this.refreshView();
+		}, intervalMs);
 	}
 
 	async onload() {
@@ -88,10 +109,19 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		this.registerEvent(this.app.vault.on('delete', debouncedRefresh));
 		this.registerEvent(this.app.vault.on('create', debouncedRefresh));
 		this.registerEvent(this.app.vault.on('rename', debouncedRefresh));
+
+		// Start the periodic auto-refresh timer based on the user setting
+		this.setupAutoRefresh();
 	}
 
 	async onunload() {
 		console.log('unloading plugin');
+
+		// Clear the auto-refresh interval timer to prevent memory leaks
+		if (this.refreshIntervalId !== null) {
+			window.clearInterval(this.refreshIntervalId);
+			this.refreshIntervalId = null;
+		}
 
 		// Clean up by detaching any leaves created by this plugin
 		const leavesToDetach = this.app.workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
@@ -1060,6 +1090,19 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 				.onChange(async (value) => {
 					this.plugin.settings.includeListFileOutlines = value;
 					this.debouncedSave();
+				}));
+
+		new Setting(contentEl)
+			.setName('Auto-refresh interval (minutes)')
+			.setDesc('Periodically refresh the panel to update headings while editing. Set to 0 to disable. Default is 10 minutes.')
+			.addSlider(slider => slider
+				.setLimits(0, 60, 5)
+				.setValue(this.plugin.settings.autoRefreshInterval)
+				.setDynamicTooltip()
+				.onChange(async (value) => {
+					this.plugin.settings.autoRefreshInterval = value;
+					this.debouncedSave();
+					this.plugin.setupAutoRefresh();
 				}));
 
 		new Setting(contentEl)
