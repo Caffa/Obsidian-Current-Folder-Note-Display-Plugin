@@ -429,7 +429,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	async displayNotesInCurrentFolder(): Promise<void> {
 		// console.log("[CFN] Starting displayNotesInCurrentFolder");
-		const container = this.containerEl.children[1] as HTMLElement;
+		const container = this.contentEl;
 		container.empty();
 
 		// Get display settings
