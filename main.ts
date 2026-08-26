@@ -148,6 +148,7 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		if (existingLeaves.length) {
 			// A leaf with our view already exists, use that
 			leaf = existingLeaves[0];
+			await leaf.loadIfDeferred();
 		} else {
 			// Our view could not be found in the workspace, create a new leaf
 			// in the right sidebar for it
@@ -180,6 +181,7 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		if (leaves.length === 1) {
 			// console.log("[CFN] Updating existing view");
 			const leaf = leaves[0];
+			await leaf.loadIfDeferred();
 			const view = leaf.view;
 
 			// Check if view is an instance of CurrentFolderNotesDisplayView
