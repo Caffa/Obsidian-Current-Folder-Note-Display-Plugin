@@ -291,7 +291,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		this.pendingTimers.clear();
 	}
 
-	async safeOpenFile(file: TFile, headingText?: string): Promise<void> {
+	async safeOpenFile(file: TFile, options?: { line?: number }): Promise<void> {
 		const refreshed = this.app.vault.getAbstractFileByPath(file.path);
 		if (!refreshed || !(refreshed instanceof TFile)) {
 			console.log('[CFN] Skipping openFile: file no longer exists', file.path);
@@ -304,7 +304,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		try {
 			const leaf = this.app.workspace.getLeaf(false);
-			await leaf.openFile(refreshed);
+			await leaf.openFile(refreshed, options?.line !== undefined ? { eState: { line: options.line } } : undefined);
 		} catch (err) {
 			console.error('[CFN] safeOpenFile failed:', err);
 		}
@@ -327,6 +327,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			headingText = this.extractAlias(headingText);
 			const headingLabel = '→ ' + headingText;
 			const headingLevel = heading.level;
+			const line = heading.position?.start?.line;
 
 			const p: HTMLElement = container.createEl('p', { text: headingLabel });
 			p.classList.add('basic-heading');
@@ -338,7 +339,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 			p.addEventListener('click', (event) => {
 				event.preventDefault();
-				this.safeOpenFile(file, headingText);
+				this.safeOpenFile(file, line !== undefined ? { line } : undefined);
 				const selection = window.getSelection();
 				if (selection) {
 					selection.removeAllRanges();
@@ -378,6 +379,16 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			});
 		}
 
+		// Resolve the file once so each heading click doesn't need to look it up
+		const file = this.app.vault.getAbstractFileByPath(currentFilePath);
+		if (!(file instanceof TFile)) {
+			container.createEl('p', {
+				cls: 'error-note',
+				text: 'Could not resolve file for headings'
+			});
+			return;
+		}
+
 		// Use a more efficient regex approach for large files
 		const headingRegex = /^(#+)\s+(.*)$/gm;
 		let match;
@@ -394,6 +405,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				headingText = this.extractAlias(headingText);
 				// Add a right arrow symbol to the heading text
 				let headingLabel = '→ ' + headingText;
+				const line = currentFileContent.substring(0, match.index).split('\n').length - 1;
 
 			const p: HTMLElement = container.createEl('p', { text: headingLabel });
 			p.classList.add('basic-heading');
@@ -407,10 +419,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				// Prevent default behavior
 				event.preventDefault();
 
-				const file = this.app.vault.getAbstractFileByPath(currentFilePath);
-				if (file instanceof TFile) {
-					this.safeOpenFile(file, headingText);
-				}
+				this.safeOpenFile(file, { line });
 
 				// Clear any text selection
 				const selection = window.getSelection();
