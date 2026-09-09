@@ -112,6 +112,18 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 		// Start the periodic auto-refresh timer based on the user setting
 		this.setupAutoRefresh();
+
+		// Pause auto-refresh while Obsidian is in the background; resume on return
+		this.registerDomEvent(document, 'visibilitychange', () => {
+			if (document.hidden) {
+				if (this.refreshIntervalId !== null) {
+					window.clearInterval(this.refreshIntervalId);
+					this.refreshIntervalId = null;
+				}
+			} else {
+				this.setupAutoRefresh();
+			}
+		});
 	}
 
 	async onunload() {
@@ -166,6 +178,10 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	}
 
 	async refreshView() {
+		if (!this.app.workspace.layoutReady) {
+			return;
+		}
+
 		const { workspace } = this.app;
 		// console.log("[CFN] Refresh view triggered");
 		const leaves = workspace.getLeavesOfType(VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY);
@@ -186,7 +202,11 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 			// Check if view is an instance of CurrentFolderNotesDisplayView
 			if (view && view instanceof CurrentFolderNotesDisplayView) {
-				await view.displayNotesInCurrentFolder();
+				try {
+					await view.displayNotesInCurrentFolder();
+				} catch (err) {
+					console.error('[CFN] displayNotesInCurrentFolder failed:', err);
+				}
 			} else {
 				// If the view doesn't have the expected method, recreate it
 				console.log("[CFN] View is not a CurrentFolderNotesDisplayView, recreating view");
@@ -237,6 +257,8 @@ export const VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY = "current-folder-notes-view
 export class CurrentFolderNotesDisplayView extends ItemView {
 	plugin: CurrentFolderNotesDisplay;
 	private titleCaseCache = new Map<string, string>();
+	private disposed = false;
+	private pendingTimers = new Set<number>();
 
 	constructor(leaf: WorkspaceLeaf, plugin: CurrentFolderNotesDisplay) {
 		super(leaf);
@@ -262,7 +284,30 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async onClose() {
-		// View cleanup is handled automatically by Obsidian
+		this.disposed = true;
+		for (const timerId of this.pendingTimers) {
+			window.clearTimeout(timerId);
+		}
+		this.pendingTimers.clear();
+	}
+
+	async safeOpenFile(file: TFile, headingText?: string): Promise<void> {
+		const refreshed = this.app.vault.getAbstractFileByPath(file.path);
+		if (!refreshed || !(refreshed instanceof TFile)) {
+			console.log('[CFN] Skipping openFile: file no longer exists', file.path);
+			return;
+		}
+
+		if (this.disposed || !this.contentEl.isConnected) {
+			return;
+		}
+
+		try {
+			const leaf = this.app.workspace.getLeaf(false);
+			await leaf.openFile(refreshed);
+		} catch (err) {
+			console.error('[CFN] safeOpenFile failed:', err);
+		}
 	}
 
 	// main.ts
@@ -293,7 +338,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 			p.addEventListener('click', (event) => {
 				event.preventDefault();
-				this.app.workspace.openLinkText('#' + headingText, file.path);
+				this.safeOpenFile(file, headingText);
 				const selection = window.getSelection();
 				if (selection) {
 					selection.removeAllRanges();
@@ -350,42 +395,44 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				// Add a right arrow symbol to the heading text
 				let headingLabel = '→ ' + headingText;
 
-				const p: HTMLElement = container.createEl('p', { text: headingLabel });
-				p.classList.add('basic-heading');
-				p.classList.add(`heading-level-${headingLevel}`);
+			const p: HTMLElement = container.createEl('p', { text: headingLabel });
+			p.classList.add('basic-heading');
+			p.classList.add(`heading-level-${headingLevel}`);
 
-				if (addExtraHeadingCSS) {
-					p.classList.add('extra-heading-style');
-				}
-
-				p.addEventListener('click', (event) => {
-					// Prevent default behavior
-					event.preventDefault();
-
-					// Use the openLinkText method to navigate to the heading
-					this.app.workspace.openLinkText('#' + headingText, currentFilePath);
-
-					// Clear any text selection
-					const selection = window.getSelection();
-					if (selection) {
-						selection.removeAllRanges();
-					}
-				});
-
-				// Add hover effect
-				p.onmouseover = () => {
-					p.classList.add('hover-style-heading');
-				}
-				// Remove hover effect when not hovering
-				p.onmouseout = () => {
-					p.classList.remove('hover-style-heading');
-				}
-
-				headingCount++;
+			if (addExtraHeadingCSS) {
+				p.classList.add('extra-heading-style');
 			}
 
-			// Indicate if there are more headings not shown
-			if (headingCount >= MAX_HEADINGS) {
+			p.addEventListener('click', (event) => {
+				// Prevent default behavior
+				event.preventDefault();
+
+				const file = this.app.vault.getAbstractFileByPath(currentFilePath);
+				if (file instanceof TFile) {
+					this.safeOpenFile(file, headingText);
+				}
+
+				// Clear any text selection
+				const selection = window.getSelection();
+				if (selection) {
+					selection.removeAllRanges();
+				}
+			});
+
+			// Add hover effect
+			p.onmouseover = () => {
+				p.classList.add('hover-style-heading');
+			}
+			// Remove hover effect when not hovering
+			p.onmouseout = () => {
+				p.classList.remove('hover-style-heading');
+			}
+
+			headingCount++;
+		}
+
+		// Indicate if there are more headings not shown
+		if (headingCount >= MAX_HEADINGS) {
 				container.createEl('p', {
 					cls: 'more-headings-note',
 					text: '... more headings available (not shown)'
@@ -428,6 +475,10 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	}
 
 	async displayNotesInCurrentFolder(): Promise<void> {
+		if (this.disposed || !this.contentEl.isConnected) {
+			return;
+		}
+
 		// console.log("[CFN] Starting displayNotesInCurrentFolder");
 		const container = this.contentEl;
 		container.empty();
@@ -567,47 +618,45 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 					cls: 'nav-title',
 					text: this.getShortNoteName(prevNote.basename)
 				});
-				prevLink.setAttribute('aria-label', `Previous: ${prevNote.basename}`);
-				prevLink.addEventListener('click', () => {
-					// Use the full path to handle duplicate file names
-					this.app.workspace.openLinkText(prevNote.path, '');
-				});
-			}
+			prevLink.setAttribute('aria-label', `Previous: ${prevNote.basename}`);
+			prevLink.addEventListener('click', () => {
+				this.safeOpenFile(prevNote);
+			});
+		}
 
-			// Next note
-			if (currentFileIndex < files.length - 1) {
-				const nextNote = files[currentFileIndex + 1];
-				const nextLink = navHeader.createDiv({ cls: 'nav-link next-note' });
-				nextLink.createSpan({ cls: 'nav-direction', text: 'Next' });
-				const nextIcon = nextLink.createSpan({ cls: 'nav-icon' });
-				nextIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-right" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 40,20 L 70,50 L 40,80"></path></svg>`;
-				const nextTitle = nextLink.createSpan({
-					cls: 'nav-title',
-					text: this.getShortNoteName(nextNote.basename)
-				});
-				nextLink.setAttribute('aria-label', `Next: ${nextNote.basename}`);
-				nextLink.addEventListener('click', () => {
-					// Use the full path to handle duplicate file names
-					this.app.workspace.openLinkText(nextNote.path, '');
-				});
-			}
+		// Next note
+		if (currentFileIndex < files.length - 1) {
+			const nextNote = files[currentFileIndex + 1];
+			const nextLink = navHeader.createDiv({ cls: 'nav-link next-note' });
+			nextLink.createSpan({ cls: 'nav-direction', text: 'Next' });
+			const nextIcon = nextLink.createSpan({ cls: 'nav-icon' });
+			nextIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-right" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 40,20 L 70,50 L 40,80"></path></svg>`;
+			const nextTitle = nextLink.createSpan({
+				cls: 'nav-title',
+				text: this.getShortNoteName(nextNote.basename)
+			});
+			nextLink.setAttribute('aria-label', `Next: ${nextNote.basename}`);
+			nextLink.addEventListener('click', () => {
+				this.safeOpenFile(nextNote);
+			});
+		}
 
-			// Current note outline - LAZY LOAD
-			if (this.plugin.settings.includeCurrentFileOutline) {
-				const currentFile = files[currentFileIndex];
-				// Create the outline section first
-				const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
+		// Current note outline - LAZY LOAD
+		if (this.plugin.settings.includeCurrentFileOutline) {
+			const currentFile = files[currentFileIndex];
+			// Create the outline section first
+			const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
 
-				// Add current note title
-				outlineSection.createEl('div', {
-					cls: 'current-note-title',
-					text: currentFile.basename
-				});
+			// Add current note title
+			outlineSection.createEl('div', {
+				cls: 'current-note-title',
+				text: currentFile.basename
+			});
 
-				outlineSection.createEl('div', {
-					cls: 'folder-section-header',
-					text: 'CURRENT NOTE OUTLINE'
-				});
+			outlineSection.createEl('div', {
+				cls: 'folder-section-header',
+				text: 'CURRENT NOTE OUTLINE'
+			});
 
 				// Add a loading indicator
 				const loadingEl = outlineSection.createEl('div', {
@@ -616,7 +665,11 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				});
 
 				// Try using metadata cache first (faster), fallback to file read
-				setTimeout(async () => {
+				const outlineTimerId = window.setTimeout(async () => {
+					this.pendingTimers.delete(outlineTimerId);
+					if (this.disposed || !this.contentEl.isConnected) {
+						return;
+					}
 					loadingEl.remove();
 
 					// Try cache first
@@ -626,6 +679,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 						// Fallback to file read if cache unavailable
 						try {
 							const fileContent = await this.app.vault.cachedRead(currentFile);
+							if (this.disposed || !this.contentEl.isConnected) {
+								return;
+							}
 							if (fileContent) {
 								this.createClickableHeadings(outlineSection, fileContent, currentFile.path, true);
 							} else {
@@ -637,6 +693,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 						}
 					}
 				}, 10);
+				this.pendingTimers.add(outlineTimerId);
 			}
 
 			// Add separator
@@ -708,6 +765,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 					// Queue the file read instead of immediate async
 					queueFileRead(async () => {
+						if (this.disposed || !this.contentEl.isConnected) {
+							return;
+						}
 						try {
 							// Try cache first (faster)
 							const usedCache = this.createClickableHeadingsFromCache(fileContainer, file, isCurrentFile);
@@ -715,6 +775,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 							if (!usedCache) {
 								// Fallback to file read if cache unavailable
 								const fileContent = await this.app.vault.cachedRead(file);
+								if (this.disposed || !this.contentEl.isConnected) {
+									return;
+								}
 								outlinePlaceholder.remove();
 								if (fileContent) {
 									this.createClickableHeadings(fileContainer, fileContent, file.path, isCurrentFile);
@@ -732,7 +795,11 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 			// Process next batch if needed
 			if (endIdx < displayedFiles.length) {
-				setTimeout(() => processBatch(endIdx), 50);
+				const batchTimerId = window.setTimeout(() => {
+					this.pendingTimers.delete(batchTimerId);
+					processBatch(endIdx);
+				}, 50);
+				this.pendingTimers.add(batchTimerId);
 			}
 
 			// Show message if we're not displaying all files
@@ -793,8 +860,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// Add click handler to open the file
 		a.addEventListener('click', () => {
-			// Use the full path instead of just basename to handle duplicate file names
-			this.app.workspace.openLinkText(file.path, '');
+			this.safeOpenFile(file);
 		});
 	}
 
@@ -835,9 +901,16 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			});
 
 				// Load content asynchronously with timeout to prevent blocking UI
-				setTimeout(async () => {
+				const emptyStateTimerId = window.setTimeout(async () => {
+					this.pendingTimers.delete(emptyStateTimerId);
+					if (this.disposed || !this.contentEl.isConnected) {
+						return;
+					}
 					try {
 						const fileContent = await this.app.vault.cachedRead(activeFile);
+						if (this.disposed || !this.contentEl.isConnected) {
+							return;
+						}
 						if (fileContent) {
 							// Remove loading indicator
 							loadingEl.remove();
@@ -861,6 +934,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 						loadingEl.setText("Failed to load outline");
 					}
 				}, 10);
+				this.pendingTimers.add(emptyStateTimerId);
 			}
 	}
 
