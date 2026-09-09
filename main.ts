@@ -76,7 +76,7 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 	async onload() {
 		await this.loadSettings();
 
-		 // Load custom styles
+		// Load custom styles
 		this.loadStyles();
 
 		// This adds a settings tab so the user can configure various aspects of the plugin
@@ -404,44 +404,44 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				// Use extractAlias to get the alias from the heading text
 				headingText = this.extractAlias(headingText);
 				// Add a right arrow symbol to the heading text
-				let headingLabel = '→ ' + headingText;
+				const headingLabel = '→ ' + headingText;
 				const line = currentFileContent.substring(0, match.index).split('\n').length - 1;
 
-			const p: HTMLElement = container.createEl('p', { text: headingLabel });
-			p.classList.add('basic-heading');
-			p.classList.add(`heading-level-${headingLevel}`);
+				const p: HTMLElement = container.createEl('p', { text: headingLabel });
+				p.classList.add('basic-heading');
+				p.classList.add(`heading-level-${headingLevel}`);
 
-			if (addExtraHeadingCSS) {
-				p.classList.add('extra-heading-style');
-			}
-
-			p.addEventListener('click', (event) => {
-				// Prevent default behavior
-				event.preventDefault();
-
-				this.safeOpenFile(file, { line });
-
-				// Clear any text selection
-				const selection = window.getSelection();
-				if (selection) {
-					selection.removeAllRanges();
+				if (addExtraHeadingCSS) {
+					p.classList.add('extra-heading-style');
 				}
-			});
 
-			// Add hover effect
-			p.onmouseover = () => {
-				p.classList.add('hover-style-heading');
+				p.addEventListener('click', (event) => {
+					// Prevent default behavior
+					event.preventDefault();
+
+					this.safeOpenFile(file, { line });
+
+					// Clear any text selection
+					const selection = window.getSelection();
+					if (selection) {
+						selection.removeAllRanges();
+					}
+				});
+
+				// Add hover effect
+				p.onmouseover = () => {
+					p.classList.add('hover-style-heading');
+				}
+				// Remove hover effect when not hovering
+				p.onmouseout = () => {
+					p.classList.remove('hover-style-heading');
+				}
+
+				headingCount++;
 			}
-			// Remove hover effect when not hovering
-			p.onmouseout = () => {
-				p.classList.remove('hover-style-heading');
-			}
 
-			headingCount++;
-		}
-
-		// Indicate if there are more headings not shown
-		if (headingCount >= MAX_HEADINGS) {
+			// Indicate if there are more headings not shown
+			if (headingCount >= MAX_HEADINGS) {
 				container.createEl('p', {
 					cls: 'more-headings-note',
 					text: '... more headings available (not shown)'
@@ -548,7 +548,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		pathDisplay.style.wordBreak = 'break-word';
 
 		// Get and filter files
-		let folder = this.app.vault.getAbstractFileByPath(parentFolderPath);
+		const folder = this.app.vault.getAbstractFileByPath(parentFolderPath);
 		// console.log("[CFN] Found folder:", folder?.path);
 		let files: TFile[] = [];
 
@@ -623,49 +623,49 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				const prevIcon = prevLink.createSpan({ cls: 'nav-icon' });
 				prevIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-left" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 60,20 L 30,50 L 60,80"></path></svg>`;
 				prevLink.createSpan({ cls: 'nav-direction', text: 'Previous' });
-				const prevTitle = prevLink.createSpan({
+				prevLink.createSpan({
 					cls: 'nav-title',
 					text: this.getShortNoteName(prevNote.basename)
 				});
-			prevLink.setAttribute('aria-label', `Previous: ${prevNote.basename}`);
-			prevLink.addEventListener('click', () => {
-				this.safeOpenFile(prevNote);
-			});
-		}
+				prevLink.setAttribute('aria-label', `Previous: ${prevNote.basename}`);
+				prevLink.addEventListener('click', () => {
+					this.safeOpenFile(prevNote);
+				});
+			}
 
-		// Next note
-		if (currentFileIndex < files.length - 1) {
-			const nextNote = files[currentFileIndex + 1];
-			const nextLink = navHeader.createDiv({ cls: 'nav-link next-note' });
-			nextLink.createSpan({ cls: 'nav-direction', text: 'Next' });
-			const nextIcon = nextLink.createSpan({ cls: 'nav-icon' });
-			nextIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-right" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 40,20 L 70,50 L 40,80"></path></svg>`;
-			const nextTitle = nextLink.createSpan({
-				cls: 'nav-title',
-				text: this.getShortNoteName(nextNote.basename)
-			});
-			nextLink.setAttribute('aria-label', `Next: ${nextNote.basename}`);
-			nextLink.addEventListener('click', () => {
-				this.safeOpenFile(nextNote);
-			});
-		}
+			// Next note
+			if (currentFileIndex < files.length - 1) {
+				const nextNote = files[currentFileIndex + 1];
+				const nextLink = navHeader.createDiv({ cls: 'nav-link next-note' });
+				nextLink.createSpan({ cls: 'nav-direction', text: 'Next' });
+				const nextIcon = nextLink.createSpan({ cls: 'nav-icon' });
+				nextIcon.innerHTML = `<svg viewBox="0 0 100 100" class="arrow-right" width="16" height="16"><path fill="currentColor" stroke="currentColor" d="M 40,20 L 70,50 L 40,80"></path></svg>`;
+				nextLink.createSpan({
+					cls: 'nav-title',
+					text: this.getShortNoteName(nextNote.basename)
+				});
+				nextLink.setAttribute('aria-label', `Next: ${nextNote.basename}`);
+				nextLink.addEventListener('click', () => {
+					this.safeOpenFile(nextNote);
+				});
+			}
 
-		// Current note outline - LAZY LOAD
-		if (this.plugin.settings.includeCurrentFileOutline) {
-			const currentFile = files[currentFileIndex];
-			// Create the outline section first
-			const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
+			// Current note outline - LAZY LOAD
+			if (this.plugin.settings.includeCurrentFileOutline) {
+				const currentFile = files[currentFileIndex];
+				// Create the outline section first
+				const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
 
-			// Add current note title
-			outlineSection.createEl('div', {
-				cls: 'current-note-title',
-				text: currentFile.basename
-			});
+				// Add current note title
+				outlineSection.createEl('div', {
+					cls: 'current-note-title',
+					text: currentFile.basename
+				});
 
-			outlineSection.createEl('div', {
-				cls: 'folder-section-header',
-				text: 'CURRENT NOTE OUTLINE'
-			});
+				outlineSection.createEl('div', {
+					cls: 'folder-section-header',
+					text: 'CURRENT NOTE OUTLINE'
+				});
 
 				// Add a loading indicator
 				const loadingEl = outlineSection.createEl('div', {
@@ -724,7 +724,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		// Queue-based file reading with concurrency limit to prevent memory issues
 		const MAX_CONCURRENT_READS = 5;
 		let activeReads = 0;
-		let readQueue: Array<() => Promise<void>> = [];
+		const readQueue: Array<() => Promise<void>> = [];
 		let isProcessingQueue = false;
 
 		const processQueue = async () => {
@@ -806,6 +806,9 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			if (endIdx < displayedFiles.length) {
 				const batchTimerId = window.setTimeout(() => {
 					this.pendingTimers.delete(batchTimerId);
+					if (this.disposed || !this.contentEl.isConnected) {
+						return;
+					}
 					processBatch(endIdx);
 				}, 50);
 				this.pendingTimers.add(batchTimerId);
@@ -909,45 +912,45 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 				text: 'Loading outline...'
 			});
 
-				// Load content asynchronously with timeout to prevent blocking UI
-				const emptyStateTimerId = window.setTimeout(async () => {
-					this.pendingTimers.delete(emptyStateTimerId);
+			// Load content asynchronously with timeout to prevent blocking UI
+			const emptyStateTimerId = window.setTimeout(async () => {
+				this.pendingTimers.delete(emptyStateTimerId);
+				if (this.disposed || !this.contentEl.isConnected) {
+					return;
+				}
+				try {
+					const fileContent = await this.app.vault.cachedRead(activeFile);
 					if (this.disposed || !this.contentEl.isConnected) {
 						return;
 					}
-					try {
-						const fileContent = await this.app.vault.cachedRead(activeFile);
-						if (this.disposed || !this.contentEl.isConnected) {
-							return;
-						}
-						if (fileContent) {
-							// Remove loading indicator
-							loadingEl.remove();
-							// Create the headings with a limited subset of content if it's large
-							const contentSize = fileContent.length;
-							if (contentSize > 50000) { // If content is very large (>50KB)
-								const truncatedContent = fileContent.substring(0, 50000);
-								this.createClickableHeadings(container as HTMLElement, truncatedContent, currentFilePath, true);
-								container.createEl('p', {
-									text: 'Note is very large. Only showing first portion of headings.',
-									cls: 'empty-state-subtext'
-								});
-							} else {
-								this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
-							}
+					if (fileContent) {
+						// Remove loading indicator
+						loadingEl.remove();
+						// Create the headings with a limited subset of content if it's large
+						const contentSize = fileContent.length;
+						if (contentSize > 50000) { // If content is very large (>50KB)
+							const truncatedContent = fileContent.substring(0, 50000);
+							this.createClickableHeadings(container as HTMLElement, truncatedContent, currentFilePath, true);
+							container.createEl('p', {
+								text: 'Note is very large. Only showing first portion of headings.',
+								cls: 'empty-state-subtext'
+							});
 						} else {
-							loadingEl.setText('No content found');
+							this.createClickableHeadings(container as HTMLElement, fileContent, currentFilePath, true);
 						}
-					} catch (err) {
-						console.error("Error loading outline:", err);
-						loadingEl.setText("Failed to load outline");
+					} else {
+						loadingEl.setText('No content found');
 					}
-				}, 10);
-				this.pendingTimers.add(emptyStateTimerId);
-			}
+				} catch (err) {
+					console.error("Error loading outline:", err);
+					loadingEl.setText("Failed to load outline");
+				}
+			}, 10);
+			this.pendingTimers.add(emptyStateTimerId);
+		}
 	}
 
-	private applyFilters(files: TFile[], parentFolderPath: string, skipIncludeFilter: boolean = false): TFile[] {
+	private applyFilters(files: TFile[], parentFolderPath: string, skipIncludeFilter = false): TFile[] {
 		// Create a single-pass filter function to avoid multiple array iterations
 		return files.filter(file => {
 			// Skip files in subfolders if that setting is disabled
