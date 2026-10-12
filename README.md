@@ -46,7 +46,7 @@ Perfect for writers organizing a novel project:
 
 ## 💻 Installation
 
-### Community Plugins (Coming Soon)
+### Community Plugins
 1. Open Settings > Community plugins
 2. Click "Browse"
 3. Search for "Current Folder Notes"
