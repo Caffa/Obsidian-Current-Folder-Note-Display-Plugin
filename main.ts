@@ -1,5 +1,7 @@
 import {
 	App,
+	CachedMetadata,
+	Debouncer,
 	Notice,
 	Plugin,
 	PluginSettingTab,
@@ -12,6 +14,8 @@ import {
 	Platform,
 	debounce
 } from 'obsidian';
+
+import { claimOrUseHeadingCore, getHeadingCoreApi, HEADING_CORE_UPDATED } from './headingCore';
 
 interface CurrentFolderNotesDisplaySettings {
 	excludeTitlesFilter: string;
@@ -48,6 +52,9 @@ const DEFAULT_SETTINGS: Partial<CurrentFolderNotesDisplaySettings> = {
 export default class CurrentFolderNotesDisplay extends Plugin {
 	settings!: CurrentFolderNotesDisplaySettings;
 	private refreshIntervalId: number | null = null;
+	private headingCore: any = null;
+	private headingCoreIsOwner = false;
+	private headingCoreUpdatedListener: (() => void) | null = null;
 
 	fileChangeHandler(file: TFile) {
 		if (file instanceof TFile) {
@@ -124,6 +131,20 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 				this.setupAutoRefresh();
 			}
 		});
+
+		// Adopt or claim the shared heading core.
+		const { api, isOwner } = claimOrUseHeadingCore(this, 'current-folder-notes-pamphlet', 2, {
+			onFileChange: () => {
+				this.refreshView();
+			},
+		});
+		this.headingCore = api;
+		this.headingCoreIsOwner = isOwner;
+		// Refresh view when any owner publishes heading updates
+		this.headingCoreUpdatedListener = () => {
+			this.refreshView();
+		};
+		window.addEventListener(HEADING_CORE_UPDATED, this.headingCoreUpdatedListener);
 	}
 
 	async onunload() {
@@ -133,6 +154,25 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 		if (this.refreshIntervalId !== null) {
 			window.clearInterval(this.refreshIntervalId);
 			this.refreshIntervalId = null;
+		}
+
+		// Disconnect heading-core update listener
+		try {
+			if (this.headingCoreUpdatedListener) {
+				window.removeEventListener(HEADING_CORE_UPDATED, this.headingCoreUpdatedListener);
+				this.headingCoreUpdatedListener = null;
+			}
+		} catch (error) {
+			console.warn('[CFN] heading core listener cleanup failed:', error);
+		}
+
+		// Release shared heading core ownership if we held it
+		try {
+			if (this.headingCoreIsOwner && this.headingCore && this.headingCore === getHeadingCoreApi() && this.headingCore?.release) {
+				this.headingCore.release();
+			}
+		} catch (error) {
+			console.warn('[CFN] heading core release failed:', error);
 		}
 
 		// Clean up by detaching any leaves created by this plugin
@@ -254,15 +294,24 @@ export default class CurrentFolderNotesDisplay extends Plugin {
 
 export const VIEW_TYPE_CURRENT_FOLDER_NOTES_DISPLAY = "current-folder-notes-view";
 
+const MAX_HEADINGS = 100;
+
 export class CurrentFolderNotesDisplayView extends ItemView {
 	plugin: CurrentFolderNotesDisplay;
 	private titleCaseCache = new Map<string, string>();
 	private disposed = false;
 	private pendingTimers = new Set<number>();
+	outlineFilePath: string | null = null;
+	lastOutlineSignature: string | null = null;
+	private outlineVisible = true;
+	private debouncedOutlineUpdate: Debouncer<[TFile, CachedMetadata | null], void>;
+	private debouncedOutlineReveal: Debouncer<[], void>;
 
 	constructor(leaf: WorkspaceLeaf, plugin: CurrentFolderNotesDisplay) {
 		super(leaf);
 		this.plugin = plugin;
+		this.debouncedOutlineUpdate = debounce<[TFile, CachedMetadata | null], void>((f, c) => this.updateCurrentNoteOutline(f, c), 1500, true);
+		this.debouncedOutlineReveal = debounce<[], void>(() => this.revealOutline(), 200, true);
 	}
 
 	getViewType() {
@@ -281,6 +330,38 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 	async onOpen() {
 
 		await this.displayNotesInCurrentFolder();
+
+		this.registerEvent(this.app.metadataCache.on('changed', (file, _data, cache) => {
+			if (file.path !== this.outlineFilePath || !this.outlineVisible) return;
+			this.debouncedOutlineUpdate(file, cache);
+		}));
+
+		this.registerEvent(this.app.workspace.on('layout-change', () => {
+			if (this.disposed || !this.contentEl.isConnected) return;
+			const visible = this.contentEl.offsetParent !== null;
+			if (visible === this.outlineVisible) return;
+			this.outlineVisible = visible;
+			if (visible) {
+				void this.debouncedOutlineReveal();
+			} else {
+				this.debouncedOutlineUpdate.cancel();
+				this.debouncedOutlineReveal.cancel();
+			}
+		}));
+
+		const ro = new ResizeObserver(entries => {
+			const vis = entries[0].contentRect.width > 0;
+			if (vis === this.outlineVisible) return;
+			this.outlineVisible = vis;
+			if (vis) {
+				this.debouncedOutlineReveal();
+			} else {
+				this.debouncedOutlineUpdate.cancel();
+				this.debouncedOutlineReveal.cancel();
+			}
+		});
+		ro.observe(this.contentEl);
+		this.register(() => ro.disconnect());
 	}
 
 	async onClose() {
@@ -289,6 +370,8 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			window.clearTimeout(timerId);
 		}
 		this.pendingTimers.clear();
+		this.debouncedOutlineUpdate.cancel();
+		this.debouncedOutlineReveal.cancel();
 	}
 
 	async safeOpenFile(file: TFile, options?: { line?: number }): Promise<void> {
@@ -312,15 +395,27 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 	// main.ts
 
+	computeHeadingSignature(file: TFile, cache: CachedMetadata | null): string {
+		const resolvedCache = cache ?? this.app.metadataCache.getFileCache(file);
+		if (!resolvedCache || !resolvedCache.headings || resolvedCache.headings.length === 0) {
+			return '';
+		}
+		return resolvedCache.headings.slice(0, MAX_HEADINGS).map(h => `${h.level}:${h.heading}:${h.position?.start?.line ?? -1}`).join('|');
+	}
+
 	// Optimized: Use Obsidian's metadata cache for headings when available
 	createClickableHeadingsFromCache(container: HTMLElement, file: TFile, addExtraHeadingCSS: boolean): boolean {
+		const core = getHeadingCoreApi();
+		const coreHeadings = core ? core.getRawHeadings(file) : null;
 		const cache = this.app.metadataCache.getFileCache(file);
-		if (!cache || !cache.headings || cache.headings.length === 0) {
+		const rawHeadings = (coreHeadings && coreHeadings.length > 0)
+			? coreHeadings
+			: (cache?.headings ?? []);
+		if (!rawHeadings || rawHeadings.length === 0) {
 			return false; // No cached headings available
 		}
 
-		const MAX_HEADINGS = 100;
-		const headings = cache.headings.slice(0, MAX_HEADINGS);
+		const headings = rawHeadings.slice(0, MAX_HEADINGS);
 
 		for (const heading of headings) {
 			let headingText = heading.heading;
@@ -354,7 +449,7 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 			};
 		}
 
-		if (cache.headings.length > MAX_HEADINGS) {
+		if (rawHeadings.length > MAX_HEADINGS) {
 			container.createEl('p', {
 				cls: 'more-headings-note',
 				text: '... more headings available (not shown)'
@@ -393,7 +488,6 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 		const headingRegex = /^(#+)\s+(.*)$/gm;
 		let match;
 		let headingCount = 0;
-		const MAX_HEADINGS = 100; // Limit the number of headings displayed
 
 		// Process headings in batches for very large files
 		try {
@@ -481,6 +575,101 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 		// If nothing else matches, return the basename
 		return basename;
+	}
+
+	async buildOutlineInto(section: HTMLElement, file: TFile, lazy: boolean): Promise<void> {
+		this.outlineFilePath = file.path;
+		this.lastOutlineSignature = this.computeHeadingSignature(file, null);
+
+		section.empty();
+
+		// Add current note title
+		section.createEl('div', {
+			cls: 'current-note-title',
+			text: file.basename
+		});
+
+		section.createEl('div', {
+			cls: 'folder-section-header',
+			text: 'CURRENT NOTE OUTLINE'
+		});
+
+		if (lazy) {
+			// Add a loading indicator
+			const loadingEl = section.createEl('div', {
+				cls: 'loading-indicator',
+				text: 'Loading outline...'
+			});
+
+			const outlineTimerId = window.setTimeout(async () => {
+				this.pendingTimers.delete(outlineTimerId);
+				if (this.disposed || !this.contentEl.isConnected) {
+					return;
+				}
+				loadingEl.remove();
+
+				// Try cache first
+				const usedCache = this.createClickableHeadingsFromCache(section, file, true);
+
+				if (!usedCache) {
+					// Fallback to file read if cache unavailable
+					try {
+						const fileContent = await this.app.vault.cachedRead(file);
+						if (this.disposed || !this.contentEl.isConnected) {
+							return;
+						}
+						if (fileContent) {
+							this.createClickableHeadings(section, fileContent, file.path, true);
+						} else {
+							section.createEl('p', { text: 'No content found', cls: 'empty-state-subtext' });
+						}
+					} catch (err) {
+						console.error("Error loading outline:", err);
+						section.createEl('p', { text: 'Failed to load outline', cls: 'error-note' });
+					}
+				}
+			}, 10);
+			this.pendingTimers.add(outlineTimerId);
+		} else {
+			// Live update path: no loading indicator, no setTimeout
+			const usedCache = this.createClickableHeadingsFromCache(section, file, true);
+
+			if (!usedCache) {
+				try {
+					const fileContent = await this.app.vault.cachedRead(file);
+					if (this.disposed || !this.contentEl.isConnected) {
+						return;
+					}
+					if (fileContent) {
+						this.createClickableHeadings(section, fileContent, file.path, true);
+					} else {
+						section.createEl('p', { text: 'No content found', cls: 'empty-state-subtext' });
+					}
+				} catch (err) {
+					console.error("Error loading outline:", err);
+					section.createEl('p', { text: 'Failed to load outline', cls: 'error-note' });
+				}
+			}
+		}
+	}
+
+	updateCurrentNoteOutline(file: TFile, cache: CachedMetadata | null, force = false): void {
+		if (!this.plugin.settings.includeCurrentFileOutline) return;
+		if (this.disposed || !this.contentEl.isConnected) return;
+		if (!this.outlineVisible) return;
+		if (file.path !== this.outlineFilePath) return;
+		const section = this.contentEl.querySelector('.outline-section') as HTMLElement | null;
+		if (!section) return;
+		if (!force && this.computeHeadingSignature(file, cache) === this.lastOutlineSignature) return;
+
+		void this.buildOutlineInto(section, file, false);
+	}
+
+	private revealOutline(): void {
+		if (this.disposed || !this.contentEl.isConnected) return;
+		const file = this.app.vault.getAbstractFileByPath(this.outlineFilePath ?? '');
+		if (!(file instanceof TFile)) return;
+		this.updateCurrentNoteOutline(file, null, true);
 	}
 
 	async displayNotesInCurrentFolder(): Promise<void> {
@@ -652,57 +841,10 @@ export class CurrentFolderNotesDisplayView extends ItemView {
 
 			// Current note outline - LAZY LOAD
 			if (this.plugin.settings.includeCurrentFileOutline) {
-				const currentFile = files[currentFileIndex];
 				// Create the outline section first
 				const outlineSection = navigationSection.createDiv({ cls: 'outline-section' });
 
-				// Add current note title
-				outlineSection.createEl('div', {
-					cls: 'current-note-title',
-					text: currentFile.basename
-				});
-
-				outlineSection.createEl('div', {
-					cls: 'folder-section-header',
-					text: 'CURRENT NOTE OUTLINE'
-				});
-
-				// Add a loading indicator
-				const loadingEl = outlineSection.createEl('div', {
-					cls: 'loading-indicator',
-					text: 'Loading outline...'
-				});
-
-				// Try using metadata cache first (faster), fallback to file read
-				const outlineTimerId = window.setTimeout(async () => {
-					this.pendingTimers.delete(outlineTimerId);
-					if (this.disposed || !this.contentEl.isConnected) {
-						return;
-					}
-					loadingEl.remove();
-
-					// Try cache first
-					const usedCache = this.createClickableHeadingsFromCache(outlineSection, currentFile, true);
-
-					if (!usedCache) {
-						// Fallback to file read if cache unavailable
-						try {
-							const fileContent = await this.app.vault.cachedRead(currentFile);
-							if (this.disposed || !this.contentEl.isConnected) {
-								return;
-							}
-							if (fileContent) {
-								this.createClickableHeadings(outlineSection, fileContent, currentFile.path, true);
-							} else {
-								outlineSection.createEl('p', { text: 'No content found', cls: 'empty-state-subtext' });
-							}
-						} catch (err) {
-							console.error("Error loading outline:", err);
-							outlineSection.createEl('p', { text: 'Failed to load outline', cls: 'error-note' });
-						}
-					}
-				}, 10);
-				this.pendingTimers.add(outlineTimerId);
+				void this.buildOutlineInto(outlineSection, files[currentFileIndex], true);
 			}
 
 			// Add separator
@@ -1182,7 +1324,7 @@ class CurrentFolderNotesDisplaySettingTab extends PluginSettingTab {
 
 		new Setting(contentEl)
 			.setName('Auto-refresh interval (minutes)')
-			.setDesc('Periodically refresh the panel to update headings while editing. Set to 0 to disable. Default is 10 minutes.')
+			.setDesc('Keeps the panel in sync with vault changes. Outline headings now update live while editing, so this is rarely needed. Set to 0 to disable. Default is 10 minutes.')
 			.addSlider(slider => slider
 				.setLimits(0, 60, 5)
 				.setValue(this.plugin.settings.autoRefreshInterval)
